@@ -10,7 +10,11 @@ const taskRoutes     = require("./routes/taskRoutes");
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: ['http://103.118.158.33:5173', 'http://localhost:5173'], 
+  methods: ['GET', 'POST'],
+  credentials: true
+}));
 app.use(express.json());
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
