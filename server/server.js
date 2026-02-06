@@ -21,6 +21,6 @@ app.use("/api/student",    studentRoutes);
 app.use("/api/admin",      adminRoutes);
 app.use("/api/tasks",      taskRoutes);
 
-app.listen(5000, () => {
-  console.log("Server running on port 5000");
+app.listen(5003, () => {
+  console.log("Server running on port 5003");
 });
