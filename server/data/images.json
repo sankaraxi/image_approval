@@ -1,0 +1,64 @@
+[
+  {
+    "id": 1769667721841,
+    "studentId": 2,
+    "filename": "66c5ab7c30bee0727375787a17adc175",
+    "approved": true
+  },
+  {
+    "id": 1769667739083,
+    "studentId": 2,
+    "filename": "bb33541e69300b01da7a4076fea9913a",
+    "approved": true
+  },
+  {
+    "id": 1769668192347,
+    "studentId": 2,
+    "filename": "786a79426ecf01452c77ca88844d3119",
+    "approved": true
+  },
+  {
+    "id": 1769668799271,
+    "studentId": 3,
+    "filename": "ade0cb66313e22132dc103f09e43cb36",
+    "approved": false,
+    "rejected": true
+  },
+  {
+    "id": 1769669111449,
+    "studentId": 2,
+    "filename": "e71c9809af791565c89bc636b0490c38",
+    "approved": false,
+    "rejected": true
+  },
+  {
+    "id": 1769676720178,
+    "studentId": 4,
+    "filename": "71897082e84c506b275e57e912977e23",
+    "approved": false,
+    "rejected": true
+  },
+  {
+    "id": 1769677975483,
+    "studentId": 2,
+    "filename": "da5215ef2ad2b963874efe0a2226d773",
+    "approved": true,
+    "rejected": false
+  },
+  {
+    "id": 1769678422285,
+    "studentId": 2,
+    "filename": "1c415321fd6a60bce3651638f3ba56d9",
+    "category": "Nature",
+    "approved": true,
+    "rejected": false
+  },
+  {
+    "id": 1769678676970,
+    "studentId": 4,
+    "filename": "733cadb80ecab9b20dd227741fa474c0",
+    "category": "People",
+    "approved": false,
+    "rejected": false
+  }
+]

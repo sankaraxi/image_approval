@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Naming Convention Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 40px;
+            font-size: 2.5em;
+        }
+        
+        .sector {
+            margin-bottom: 50px;
+            border: 3px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 30px;
+            transition: transform 0.3s ease;
+        }
+        
+        .sector:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .sector-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .sector-header h2 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .format-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+            margin-bottom: 30px;
+        }
+        
+        .format-label {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        
+        .format-text {
+            font-family: 'Courier New', monospace;
+            font-size: 1.3em;
+            color: #333;
+            word-break: break-all;
+        }
+        
+        .example-box {
+            background: #e8f5e9;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 5px solid #4caf50;
+            margin-bottom: 30px;
+        }
+        
+        .example-label {
+            font-weight: bold;
+            color: #4caf50;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        
+        .example-text {
+            font-family: 'Courier New', monospace;
+            font-size: 1.2em;
+            color: #2e7d32;
+            word-break: break-all;
+        }
+        
+        .fields-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .field-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .field-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+        
+        .field-name {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.2em;
+            margin-bottom: 8px;
+        }
+        
+        .field-value {
+            font-family: 'Courier New', monospace;
+            background: #f0f0f0;
+            padding: 8px 12px;
+            border-radius: 5px;
+            display: inline-block;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .field-desc {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .tips {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        
+        .tips h3 {
+            color: #856404;
+            margin-bottom: 15px;
+        }
+        
+        .tips ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        
+        .tips li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+            color: #856404;
+        }
+        
+        .tips li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+            color: #ffc107;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            
+            .container {
+                box-shadow: none;
+            }
+            
+            .sector:hover {
+                transform: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📸 Image Naming Convention Guide</h1>
+        
+        <!-- Mobility Sector -->
+        <div class="sector">
+            <div class="sector-header">
+                <h2>🚗 Mobility Sector</h2>
+                <p>Images captured for mobility and autonomous vehicle projects</p>
+            </div>
+            
+            <div class="format-box">
+                <div class="format-label">📋 Format Template:</div>
+                <div class="format-text">Part_City_Camera_Date_FrameID.jpg</div>
+            </div>
+            
+            <div class="example-box">
+                <div class="example-label">✅ Valid Examples:</div>
+                <div class="example-text">MOB_BLR_FC_20260201_F001.jpg</div>
+                <div class="example-text" style="margin-top: 10px;">MOB_DEL_RC_20260206_F342.jpg</div>
+                <div class="example-text" style="margin-top: 10px;">MOB_MUM_LC_20260115_F0089.jpg</div>
+            </div>
+            
+            <h3 style="margin-bottom: 20px; color: #333;">Field Breakdown:</h3>
+            
+            <div class="fields-grid">
+                <div class="field-card">
+                    <div class="field-name">Part</div>
+                    <div class="field-value">MOB</div>
+                    <div class="field-desc">
+                        Project type identifier. Always use <strong>MOB</strong> for Mobility sector images.
+                    </div>
+                </div>
+                
+                <div class="field-card">
+                    <div class="field-name">City</div>
+                    <div class="field-value">BLR</div>
+                    <div class="field-desc">
+                        3-letter city code where image was captured.<br>
+                        Examples: BLR (Bangalore), DEL (Delhi), MUM (Mumbai), CHN (Chennai)
+                    </div>
+                </div>
+                
+                <div class="field-card">
+                    <div class="field-name">Camera</div>
+                    <div class="field-value">FC</div>
+                    <div class="field-desc">
+                        Camera position on vehicle:<br>
+                        <strong>FC</strong> = Front Camera<br>
+                        <strong>RC</strong> = Rear Camera<br>
+                        <strong>LC</strong> = Left Camera<br>
+                        <strong>RIC</strong> = Right Inside Camera
+                    </div>
+                </div>
+                
+                <div class="field-card">
+                    <div class="field-name">Date</div>
+                    <div class="field-value">20260201</div>
+                    <div class="field-desc">
+                        Date of capture in YYYYMMDD format.<br>
+                        Example: February 1, 2026 = 20260201
+                    </div>
+                </div>
+                
+                <div class="field-card">
+                    <div class="field-name">FrameID</div>
+                    <div class="field-value">F001</div>
+                    <div class="field-desc">
+                        Running frame number starting with 'F' followed by 3-4 digits.<br>
+                        Range: F001 to F9999
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Retail Sector -->
+        <div class="sector">
+            <div class="sector-header">
+                <h2>🛒 Retail Sector</h2>
+                <p>Product and shelf images from retail stores</p>
+            </div>
+            
+            <div class="format-box">
+                <div class="format-label">📋 Format Template:</div>
+                <div class="format-text">Client_StoreID_Category_Product_Shelf_Angle_Date_Sequence.jpg</div>
+            </div>
+            
+            <div class="example-box">
+                <div class="example-label">✅ Valid Examples:</div>
+                <div class="example-text">Reliance_STR1023_Beverages_CocaCola_330ml_Shelf2_Front_20260205_01.jpg</div>
+                <div class="example-text" style="margin-top: 10px;">DMart_STR2045_Snacks_LaysClassic_Shelf1_Left_20260206_02.jpg</div>
+                <div class="example-text" style="margin-top: 10px;">BigBazaar_STR3012_Dairy_AmulMilk_1L_Shelf3_Front_20260206_01.jpg</div>
+            </div>
+            
+            <h3 style="margin-bottom: 20px; color: #333;">Field Breakdown:</h3>
+            
+            <div class="fields-grid">
+                <div class="field-card">
+                    <div class="field-name">Client</div>
+                    <div class="field-value">Reliance</div>
+                    <div class="field-desc">
+                        Retail brand or client name.<br>
+                        Examples: Reliance, DMart, BigBazaar, More, StarBazaar
+                    </div>
+                </div>
+                
+                <div class="field-card">
+                    <div class="field-name">StoreID</div>
+                    <div class="field-value">STR1023</div>
+                    <div class="field-desc">
+                        Unique store identifier. Format: 3 letters + numbers.<br>
+                        Example: STR1023, DM_458, BB_301
+                    </div>
+                </div>
+                
+                <div class="field-card">
+                    <div class="field-name">Category</div>
+                    <div class="field-value">Beverages</div>
+                    <div class="field-desc">
+                        Product category.<br>
+                        Examples: Beverages, Snacks, Dairy, PersonalCare, Household, FrozenFoods
+                    </div>
+                </div>
+                
+                <div class="field-card">
+                    <div class="field-name">Product</div>
+                    <div class="field-value">CocaCola_330ml</div>
+                    <div class="field-desc">
+                        SKU, brand name, or product identifier.<br>
+                        Use underscores for spaces. Example: CocaCola_330ml, LaysClassic, AmulMilk_1L
+                    </div>
+                </div>
+                
+                <div class="field-card">
+                    <div class="field-name">Shelf</div>
+                    <div class="field-value">Shelf2</div>
+                    <div class="field-desc">
+                        Shelf number or rack identifier.<br>
+                        Format: Shelf + number<br>
+                        Example: Shelf1, Shelf2, RackA
+                    </div>
+                </div>
+                
+                <div class="field-card">
+                    <div class="field-name">Angle</div>
+                    <div class="field-value">Front</div>
+                    <div class="field-desc">
+                        Capture angle:<br>
+                        <strong>Front</strong> = Front view<br>
+                        <strong>Left</strong> = Left side<br>
+                        <strong>Right</strong> = Right side<br>
+                        <strong>Top</strong> = Top view
+                    </div>
+                </div>
+                
+                <div class="field-card">
+                    <div class="field-name">Date</div>
+                    <div class="field-value">20260205</div>
+                    <div class="field-desc">
+                        Date of capture in YYYYMMDD format.<br>
+                        Example: February 5, 2026 = 20260205
+                    </div>
+                </div>
+                
+                <div class="field-card">
+                    <div class="field-name">Sequence</div>
+                    <div class="field-value">01</div>
+                    <div class="field-desc">
+                        Sequence number for multiple images of same product.<br>
+                        Format: 2-digit number (01, 02, 03, ...99)
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tips Section -->
+        <div class="tips">
+            <h3>💡 Important Tips</h3>
+            <ul>
+                <li>Use underscores (_) to separate fields, not spaces or dashes</li>
+                <li>File extension must be .jpg, .jpeg, or .png</li>
+                <li>Use uppercase for city codes and camera positions</li>
+                <li>Dates must be in YYYYMMDD format (ISO 8601)</li>
+                <li>No special characters except underscore (_)</li>
+                <li>Be consistent with naming across all images</li>
+                <li>Double-check spelling before uploading</li>
+                <li>The system will flag non-compliant names but still accept them</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
