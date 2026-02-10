@@ -11,6 +11,7 @@ export default function AdminDashboard() {
   const [selectedTask, setSelectedTask] = useState(null); // task detail view
   const [taskImages, setTaskImages] = useState([]);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // create-task modal
   const [showCreateTask, setShowCreateTask] = useState(false);
@@ -172,27 +173,80 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-gray-50">
       {/* ──── Header ──── */}
       <header className="bg-white shadow-md border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Evaluator Dashboard</h1>
-            <p className="text-sm text-gray-500">Manage tasks &amp; review images</p>
-          </div>
-          <div className="flex items-center space-x-3">
-            {selectedTask && (
-              <button onClick={closeTaskDetail} className="btn-secondary text-sm">
-                ← Back to Tasks
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Evaluator Dashboard</h1>
+              <p className="text-xs sm:text-sm text-gray-500">Manage tasks &amp; review images</p>
+            </div>
+            
+            {/* Hamburger Icon for Mobile */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-2 rounded-md text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              aria-label="Toggle menu"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {mobileMenuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
+
+            {/* Desktop Navigation */}
+            <div className="hidden lg:flex items-center space-x-3">
+              {selectedTask && (
+                <button onClick={closeTaskDetail} className="btn-secondary text-sm">
+                  ← Back to Tasks
+                </button>
+              )}
+              <button onClick={downloadPdfReport} className="btn-secondary flex items-center space-x-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                <span>PDF Report</span>
               </button>
-            )}
-            <button onClick={downloadPdfReport} className="btn-secondary flex items-center space-x-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-              <span>PDF Report</span>
-            </button>
-            <button onClick={() => setShowCreateTask(true)} className="btn-primary flex items-center space-x-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-              <span>Create Task</span>
-            </button>
-            <button onClick={() => { logout(); navigate("/"); }} className="btn-secondary">Logout</button>
+              <button onClick={() => setShowCreateTask(true)} className="btn-primary flex items-center space-x-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                <span>Create Task</span>
+              </button>
+              <button onClick={() => { logout(); navigate("/"); }} className="btn-secondary">Logout</button>
+            </div>
           </div>
+
+          {/* Mobile Navigation Menu */}
+          {mobileMenuOpen && (
+            <div className="lg:hidden mt-4 pb-4 border-t border-gray-200 pt-4 space-y-2">
+              {selectedTask && (
+                <button
+                  onClick={() => { closeTaskDetail(); setMobileMenuOpen(false); }}
+                  className="w-full btn-secondary text-sm justify-start"
+                >
+                  ← Back to Tasks
+                </button>
+              )}
+              <button
+                onClick={() => { downloadPdfReport(); setMobileMenuOpen(false); }}
+                className="w-full btn-secondary flex items-center space-x-2 justify-center"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                <span>PDF Report</span>
+              </button>
+              <button
+                onClick={() => { setShowCreateTask(true); setMobileMenuOpen(false); }}
+                className="w-full btn-primary flex items-center space-x-2 justify-center"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                <span>Create Task</span>
+              </button>
+              <button
+                onClick={() => { logout(); navigate("/"); setMobileMenuOpen(false); }}
+                className="w-full btn-secondary"
+              >
+                Logout
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
@@ -310,10 +364,10 @@ export default function AdminDashboard() {
                   <div key={img.id} className="card-premium group">
                     <div className="relative aspect-video bg-gray-200 overflow-hidden">
                       <img
-                        src={`http://103.118.158.33:5003/uploads/${img.filename}`}
+                        src={`http://localhost:5003/uploads/${img.filename}`}
                         alt={img.renamed_filename}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
-                        onClick={() => setPreviewImage(`http://103.118.158.33:5003/uploads/${img.filename}`)}
+                        onClick={() => setPreviewImage(`http://localhost:5003/uploads/${img.filename}`)}
                       />
                       <div className="absolute top-2 right-2">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -459,7 +513,7 @@ export default function AdminDashboard() {
             </div>
             <div className="p-6 space-y-4">
               <div className="aspect-video bg-gray-200 rounded-lg overflow-hidden">
-                <img src={`http://103.118.158.33:5003/uploads/${reviewImage.filename}`} alt="" className="w-full h-full object-contain" />
+                <img src={`http://localhost:5003/uploads/${reviewImage.filename}`} alt="" className="w-full h-full object-contain" />
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><p className="text-gray-500">System Name</p><p className="font-medium">{reviewImage.renamed_filename}</p></div>
