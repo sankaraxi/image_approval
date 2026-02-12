@@ -2,6 +2,7 @@ const express = require("express");
 const db = require("../db");
 const verifyAdmin = require("../middleware/verifyAdmin");
 const auth = require("../middleware/authMiddleware");
+const { sendTaskCreationEmail } = require("../utils/emailService");
 
 const router = express.Router();
 
@@ -37,6 +38,29 @@ router.post("/", verifyAdmin, (req, res) => {
       }
 
       const taskId = result.insertId;
+
+      // Get category name and user details for email
+      db.query(
+        `SELECT c.name AS category_name, u.username 
+         FROM categories c, users u 
+         WHERE c.id = ? AND u.id = ?`,
+        [main_category_id, req.user.id],
+        (err3, details) => {
+          const taskDetails = {
+            taskId,
+            title,
+            description,
+            totalImages: total_images,
+            categoryName: details && details[0] ? details[0].category_name : 'N/A',
+            createdBy: details && details[0] ? details[0].username : req.user.username || 'Admin'
+          };
+
+          // Send email notification (async, don't wait for it)
+          sendTaskCreationEmail(taskDetails).catch(emailErr => {
+            console.error('Failed to send task creation email:', emailErr);
+          });
+        }
+      );
 
       // Insert subcategory requirements if provided
       if (Array.isArray(subcategory_requirements) && subcategory_requirements.length > 0) {

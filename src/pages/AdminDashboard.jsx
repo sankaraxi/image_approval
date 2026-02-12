@@ -137,6 +137,7 @@ export default function AdminDashboard() {
     if (selectedTask) loadTaskImages(selectedTask.id);
     loadStats();
   };
+  
   const reject = async (id) => {
     if (!adminNotes.trim()) {
       alert("Description is required for rejection");
