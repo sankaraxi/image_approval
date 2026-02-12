@@ -21,7 +21,7 @@ const sendTaskCreationEmail = async (taskDetails) => {
     
     const mailOptions = {
       from: 'info@kggeniuslabs.com',
-      to: 'sankar.k@kggeniuslabs.com',
+      to: 'krishnapriya.p@kggeniuslabs.com',
       cc: 'info@kggeniuslabs.com',
       subject: `New Task Created: ${taskDetails.title}`,
       html: `
@@ -62,7 +62,7 @@ const sendDailyReportEmail = async (stats) => {
     
     const mailOptions = {
       from: 'info@kggeniuslabs.com',
-      to: 'sankar.k@kggeniuslabs.com',
+      to: 'krishnapriya.p@kggeniuslabs.com',
       cc: 'info@kggeniuslabs.com',
       subject: `Daily Report - Image Scanner Statistics (${new Date().toLocaleDateString()})`,
       html: `
