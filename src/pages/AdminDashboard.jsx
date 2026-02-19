@@ -365,10 +365,10 @@ export default function AdminDashboard() {
                   <div key={img.id} className="card-premium group">
                     <div className="relative aspect-video bg-gray-200 overflow-hidden">
                       <img
-                        src={`http://103.118.158.33:5003/uploads/${img.filename}`}
+                        src={`http://localhost:5003/uploads/${img.filename}`}
                         alt={img.renamed_filename}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
-                        onClick={() => setPreviewImage(`http://103.118.158.33:5003/uploads/${img.filename}`)}
+                        onClick={() => setPreviewImage(`http://localhost:5003/uploads/${img.filename}`)}
                       />
                       <div className="absolute top-2 right-2">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -502,7 +502,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ──── REVIEW MODAL ──── */}
+      {/* ──── REVIE  W MODAL ──── */}
       {reviewImage && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-premium-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
@@ -514,7 +514,7 @@ export default function AdminDashboard() {
             </div>
             <div className="p-6 space-y-4">
               <div className="aspect-video bg-gray-200 rounded-lg overflow-hidden">
-                <img src={`http://103.118.158.33:5003/uploads/${reviewImage.filename}`} alt="" className="w-full h-full object-contain" />
+                <img src={`http://localhost:5003/uploads/${reviewImage.filename}`} alt="" className="w-full h-full object-contain" />
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><p className="text-gray-500">System Name</p><p className="font-medium">{reviewImage.renamed_filename}</p></div>

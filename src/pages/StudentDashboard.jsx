@@ -264,7 +264,7 @@ export default function StudentDashboard() {
               <div key={img.id} className="card-premium group">
                 <div className="relative aspect-video bg-gray-200 overflow-hidden">
                   <img
-                    src={`http://103.118.158.33:5003/uploads/${img.filename}`}
+                    src={`http://localhost:5003/uploads/${img.filename}`}
                     alt={img.renamed_filename}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
