@@ -118,7 +118,7 @@ CREATE TABLE `task_subcategory_requirements` (
   CONSTRAINT `task_subcategory_requirements_ibfk_1` FOREIGN KEY (`task_id`) REFERENCES `tasks` (`id`) ON DELETE CASCADE,
   CONSTRAINT `task_subcategory_requirements_ibfk_2` FOREIGN KEY (`subcategory_id`) REFERENCES `categories` (`id`),
   CONSTRAINT `task_subcategory_requirements_ibfk_3` FOREIGN KEY (`subsub_category_id`) REFERENCES `categories` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=41 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -127,7 +127,7 @@ CREATE TABLE `task_subcategory_requirements` (
 
 LOCK TABLES `task_subcategory_requirements` WRITE;
 /*!40000 ALTER TABLE `task_subcategory_requirements` DISABLE KEYS */;
-INSERT INTO `task_subcategory_requirements` VALUES (1,1,2,7),(2,1,3,14),(3,1,4,18),(4,1,5,25),(5,1,6,28),(16,4,2,NULL),(17,4,3,NULL),(18,4,4,NULL),(19,4,5,NULL),(20,4,6,NULL),(21,5,32,NULL),(22,5,33,NULL),(23,5,34,NULL),(24,5,35,NULL),(25,5,36,NULL),(26,6,2,7),(27,6,3,15),(28,6,4,19),(29,6,5,24),(30,6,6,28);
+INSERT INTO `task_subcategory_requirements` VALUES (1,1,2,7),(2,1,3,14),(3,1,4,18),(4,1,5,25),(5,1,6,28),(16,4,2,NULL),(17,4,3,NULL),(18,4,4,NULL),(19,4,5,NULL),(20,4,6,NULL),(26,6,2,7),(27,6,3,15),(28,6,4,19),(29,6,5,24),(30,6,6,28),(36,5,32,NULL),(37,5,33,NULL),(38,5,34,NULL),(39,5,35,NULL),(40,5,36,NULL);
 /*!40000 ALTER TABLE `task_subcategory_requirements` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -167,7 +167,7 @@ CREATE TABLE `tasks` (
 
 LOCK TABLES `tasks` WRITE;
 /*!40000 ALTER TABLE `tasks` DISABLE KEYS */;
-INSERT INTO `tasks` VALUES (1,'Coimbatore Roads','Images for Coimbatore',1,100,2,1,0,1,'in_progress',1,'2026-02-06 07:34:47','2026-02-06 07:42:19'),(4,'test mail','test desc',1,100,0,0,0,0,'open',5,'2026-02-12 09:32:22','2026-02-12 09:32:22'),(5,'test mail ii','test descri',31,100,0,0,0,0,'open',5,'2026-02-12 09:33:28','2026-02-12 09:33:28'),(6,'test again for mail trigger','df',1,100,0,0,0,1,'open',5,'2026-02-12 10:32:00','2026-02-12 10:32:00');
+INSERT INTO `tasks` VALUES (1,'Coimbatore Roads','Images for Coimbatore',1,100,2,1,0,1,'in_progress',1,'2026-02-06 07:34:47','2026-02-06 07:42:19'),(4,'test mail','test desc',1,100,0,0,0,0,'open',5,'2026-02-12 09:32:22','2026-02-12 09:32:22'),(5,'test mail iifrrdee5','test descri',31,1004,0,0,0,0,'open',5,'2026-02-12 09:33:28','2026-02-24 09:30:03'),(6,'test again for mail trigger','df',1,100,0,0,0,1,'open',5,'2026-02-12 10:32:00','2026-02-12 10:32:00');
 /*!40000 ALTER TABLE `tasks` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -211,4 +211,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-02-19 12:07:29
+-- Dump completed on 2026-02-24 15:10:38

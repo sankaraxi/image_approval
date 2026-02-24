@@ -33,7 +33,25 @@ app.listen(5003, () => {
   console.log("Server running on port 5003");
 });
 
+// Auto-complete tasks whose end_date has passed (runs every day at midnight)
+cron.schedule('0 0 * * *', () => {
+  console.log('Checking for tasks past their end_date...');
+  db.query(
+    `UPDATE tasks SET status = 'completed' WHERE end_date IS NOT NULL AND end_date < CURDATE() AND status IN ('open', 'in_progress')`,
+    (err, result) => {
+      if (err) {
+        console.error('Error auto-completing tasks:', err);
+      } else if (result.affectedRows > 0) {
+        console.log(`Auto-completed ${result.affectedRows} task(s) past their end date.`);
+      }
+    }
+  );
+}, {
+  scheduled: true,
+  timezone: "Asia/Kolkata"
+});
 
+console.log('Task end-date auto-complete cron job scheduled for midnight IST');
 
 
 // Schedule daily report email at 7:00 PM every day

@@ -15,14 +15,23 @@ export default function AdminDashboard() {
 
   // create-task modal
   const [showCreateTask, setShowCreateTask] = useState(false);
-  const [taskForm, setTaskForm] = useState({ title: "", description: "", main_category_id: "", total_images: 100 });
+  const [taskForm, setTaskForm] = useState({ title: "", description: "", main_category_id: "", total_images: 100, start_date: "", end_date: "", final_review_date: "" });
   const [subCatsForTask, setSubCatsForTask] = useState([]); // level-2 children
   const [subSubOptions, setSubSubOptions] = useState({}); // { subcatId: [level-3 items] }
   const [selectedSubSubs, setSelectedSubSubs] = useState({}); // { subcatId: subsubId | "" }
 
+  // edit-task modal
+  const [showEditTask, setShowEditTask] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
+  const [editForm, setEditForm] = useState({ title: "", description: "", main_category_id: "", total_images: 100, start_date: "", end_date: "", final_review_date: "" });
+  const [editSubCats, setEditSubCats] = useState([]);
+  const [editSubSubOptions, setEditSubSubOptions] = useState({});
+  const [editSelectedSubSubs, setEditSelectedSubSubs] = useState({});
+
   // review modal
   const [reviewImage, setReviewImage] = useState(null);
   const [adminNotes, setAdminNotes] = useState("");
+  const [approveLoading, setApproveLoading] = useState(false); // Loading state for approval + vendor upload
 
   // preview
   const [previewImage, setPreviewImage] = useState(null);
@@ -99,6 +108,25 @@ export default function AdminDashboard() {
     } catch { setSubCatsForTask([]); }
   };
 
+  // when admin picks a category in the edit-task form
+  const handleEditCategoryChange = async (catId) => {
+    setEditForm((f) => ({ ...f, main_category_id: catId }));
+    setEditSelectedSubSubs({});
+    if (!catId) { setEditSubCats([]); setEditSubSubOptions({}); return; }
+    try {
+      const res = await api.get(`/categories/children/${catId}`);
+      setEditSubCats(res.data);
+      const opts = {};
+      await Promise.all(
+        res.data.map(async (sub) => {
+          const r = await api.get(`/categories/children/${sub.id}`);
+          opts[sub.id] = r.data;
+        })
+      );
+      setEditSubSubOptions(opts);
+    } catch { setEditSubCats([]); }
+  };
+
   // ───── create task ─────
   const createTask = async () => {
     if (!taskForm.title || !taskForm.main_category_id || !taskForm.total_images) {
@@ -118,7 +146,7 @@ export default function AdminDashboard() {
         subcategory_requirements
       });
       setShowCreateTask(false);
-      setTaskForm({ title: "", description: "", main_category_id: "", total_images: 100 });
+      setTaskForm({ title: "", description: "", main_category_id: "", total_images: 100, start_date: "", end_date: "", final_review_date: "" });
       setSubCatsForTask([]);
       setSubSubOptions({});
       setSelectedSubSubs({});
@@ -129,13 +157,109 @@ export default function AdminDashboard() {
     }
   };
 
+  // ───── edit task ─────
+  const openEditTask = async (task, e) => {
+    e.stopPropagation(); // prevent opening task detail
+    try {
+      // Load full task details including requirements
+      const res = await api.get(`/tasks/${task.id}`);
+      const fullTask = res.data;
+      
+      setEditingTask(fullTask);
+      setEditForm({
+        title: fullTask.title,
+        description: fullTask.description || "",
+        main_category_id: fullTask.main_category_id,
+        total_images: fullTask.total_images,
+        start_date: fullTask.start_date ? fullTask.start_date.slice(0, 10) : "",
+        end_date: fullTask.end_date ? fullTask.end_date.slice(0, 10) : "",
+        final_review_date: fullTask.final_review_date ? fullTask.final_review_date.slice(0, 10) : ""
+      });
+
+      // Load subcategories for the selected category
+      const subRes = await api.get(`/categories/children/${fullTask.main_category_id}`);
+      setEditSubCats(subRes.data);
+
+      // Load sub-sub options and set selected values
+      const opts = {};
+      const selected = {};
+      await Promise.all(
+        subRes.data.map(async (sub) => {
+          const r = await api.get(`/categories/children/${sub.id}`);
+          opts[sub.id] = r.data;
+          
+          // Find if this subcategory has a requirement
+          const req = fullTask.requirements?.find(req => req.subcategory_id === sub.id);
+          if (req && req.subsub_category_id) {
+            selected[sub.id] = req.subsub_category_id.toString();
+          } else {
+            selected[sub.id] = "";
+          }
+        })
+      );
+      setEditSubSubOptions(opts);
+      setEditSelectedSubSubs(selected);
+      setShowEditTask(true);
+    } catch (err) {
+      alert("Failed to load task details");
+      console.error(err);
+    }
+  };
+
+  const updateTask = async () => {
+    if (!editForm.title || !editForm.main_category_id || !editForm.total_images) {
+      alert("Please fill title, category, and image count");
+      return;
+    }
+
+    const subcategory_requirements = editSubCats.map((sub) => ({
+      subcategory_id: sub.id,
+      subsub_category_id: editSelectedSubSubs[sub.id] ? parseInt(editSelectedSubSubs[sub.id]) : null
+    }));
+
+    try {
+      await api.put(`/tasks/${editingTask.id}`, {
+        ...editForm,
+        total_images: parseInt(editForm.total_images),
+        subcategory_requirements
+      });
+      setShowEditTask(false);
+      setEditingTask(null);
+      setEditForm({ title: "", description: "", main_category_id: "", total_images: 100, start_date: "", end_date: "", final_review_date: "" });
+      setEditSubCats([]);
+      setEditSubSubOptions({});
+      setEditSelectedSubSubs({});
+      loadTasks();
+      loadStats();
+      // If we're viewing this task, refresh its details
+      if (selectedTask && selectedTask.id === editingTask.id) {
+        const updatedTask = tasks.find(t => t.id === editingTask.id);
+        if (updatedTask) setSelectedTask(updatedTask);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to update task");
+    }
+  };
+
   // ───── review actions ─────
   const approve = async (id) => {
-    await api.put(`/admin/approve/${id}`, { admin_notes: adminNotes });
-    setReviewImage(null);
-    setAdminNotes("");
-    if (selectedTask) loadTaskImages(selectedTask.id);
-    loadStats();
+    setApproveLoading(true);
+    try {
+      // Call new POST endpoint that approves AND uploads to vendor
+      const response = await api.post(`/admin/approve-image/${id}`, { admin_notes: adminNotes });
+      alert("✅ " + (response.data?.message || "Image approved and uploaded to vendor"));
+      setReviewImage(null);
+      setAdminNotes("");
+      if (selectedTask) loadTaskImages(selectedTask.id);
+      else loadAllImages();
+      loadStats();
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || err.message || "Failed to approve image";
+      console.error("Approval error:", err);
+      alert("❌ " + errorMsg);
+    } finally {
+      setApproveLoading(false);
+    }
   };
   
   const reject = async (id) => {
@@ -280,29 +404,50 @@ export default function AdminDashboard() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {tasks.map((task) => {
-                  const pct = task.total_images > 0 ? Math.round((task.uploaded_count / task.total_images) * 100) : 0;
+                  const pct = task.total_images > 0 ? Math.round(((task.approved_count || 0) / task.total_images) * 100) : 0;
+                  const isExpired = task.end_date && new Date(task.end_date) < new Date(new Date().toDateString());
                   return (
                     <div
                       key={task.id}
                       onClick={() => openTask(task)}
-                      className="card-premium p-5 cursor-pointer hover:ring-2 hover:ring-primary-400 transition-all"
+                      className="card-premium p-5 cursor-pointer hover:ring-2 hover:ring-primary-400 transition-all relative"
                     >
                       <div className="flex justify-between items-start mb-3">
-                        <h3 className="font-semibold text-gray-900 text-lg">{task.title}</h3>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          task.status === "open" ? "bg-blue-100 text-blue-800" :
-                          task.status === "in_progress" ? "bg-yellow-100 text-yellow-800" :
-                          task.status === "completed" ? "bg-green-100 text-green-800" :
-                          "bg-gray-100 text-gray-800"
-                        }`}>{task.status.replace("_", " ")}</span>
+                        <h3 className="font-semibold text-gray-900 text-lg pr-2">{task.title}</h3>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            onClick={(e) => openEditTask(task, e)}
+                            className="p-1.5 rounded-md text-gray-600 hover:bg-blue-100 hover:text-blue-600 transition-colors"
+                            title="Edit Task"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            task.status === "open" ? "bg-blue-100 text-blue-800" :
+                            task.status === "in_progress" ? "bg-yellow-100 text-yellow-800" :
+                            task.status === "completed" ? "bg-green-100 text-green-800" :
+                            "bg-gray-100 text-gray-800"
+                          }`}>{task.status.replace("_", " ")}</span>
+                        </div>
                       </div>
                       {task.description && <p className="text-sm text-gray-600 mb-3 line-clamp-2">{task.description}</p>}
                       <p className="text-sm text-gray-500 mb-1">
                         <span className="font-medium">Category:</span> {task.category_name}
                       </p>
-                      <p className="text-sm text-gray-500 mb-3">
-                        <span className="font-medium">Images:</span> {task.uploaded_count} / {task.total_images}
+                      <p className="text-sm text-gray-500 mb-1">
+                        <span className="font-medium">Uploaded:</span> {task.uploaded_count || 0} &nbsp;|&nbsp;
+                        <span className="font-medium">Approved:</span> <span className="text-green-600 font-semibold">{task.approved_count || 0}</span> / {task.total_images}
                       </p>
+                      {/* Dates */}
+                      {(task.start_date || task.end_date || task.final_review_date) && (
+                        <div className="text-xs text-gray-400 mb-2 space-y-0.5">
+                          {task.start_date && <p>Start: {new Date(task.start_date).toLocaleDateString()}</p>}
+                          {task.end_date && <p className={isExpired ? "text-red-500 font-medium" : ""}>End: {new Date(task.end_date).toLocaleDateString()}{isExpired ? " (Expired)" : ""}</p>}
+                          {task.final_review_date && <p>Review by: {new Date(task.final_review_date).toLocaleDateString()}</p>}
+                        </div>
+                      )}
                       {/* progress bar */}
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
@@ -310,7 +455,7 @@ export default function AdminDashboard() {
                           style={{ width: `${Math.min(pct, 100)}%` }}
                         />
                       </div>
-                      <p className="text-xs text-gray-400 mt-1 text-right">{pct}%</p>
+                      <p className="text-xs text-gray-400 mt-1 text-right">{pct}% approved</p>
                     </div>
                   );
                 })}
@@ -329,8 +474,16 @@ export default function AdminDashboard() {
                   {selectedTask.description && <p className="text-gray-600 mt-1">{selectedTask.description}</p>}
                   <p className="text-sm text-gray-500 mt-2">
                     Category: <span className="font-medium">{selectedTask.category_name}</span> &nbsp;|&nbsp;
-                    Images: <span className="font-medium">{selectedTask.uploaded_count} / {selectedTask.total_images}</span>
+                    Uploaded: <span className="font-medium">{selectedTask.uploaded_count || 0}</span> &nbsp;|&nbsp;
+                    Approved: <span className="font-medium text-green-600">{selectedTask.approved_count || 0}</span> / {selectedTask.total_images} images
                   </p>
+                  {(selectedTask.start_date || selectedTask.end_date || selectedTask.final_review_date) && (
+                    <div className="flex gap-4 mt-2 text-xs text-gray-400">
+                      {selectedTask.start_date && <span>Start: {new Date(selectedTask.start_date).toLocaleDateString()}</span>}
+                      {selectedTask.end_date && <span>End: {new Date(selectedTask.end_date).toLocaleDateString()}</span>}
+                      {selectedTask.final_review_date && <span>Review by: {new Date(selectedTask.final_review_date).toLocaleDateString()}</span>}
+                    </div>
+                  )}
                 </div>
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                   selectedTask.status === "open" ? "bg-blue-100 text-blue-800" :
@@ -365,10 +518,10 @@ export default function AdminDashboard() {
                   <div key={img.id} className="card-premium group">
                     <div className="relative aspect-video bg-gray-200 overflow-hidden">
                       <img
-                        src={`http://localhost:5003/uploads/${img.filename}`}
+                        src={`http://103.118.158.33:5003/uploads/${img.filename}`}
                         alt={img.renamed_filename}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
-                        onClick={() => setPreviewImage(`http://localhost:5003/uploads/${img.filename}`)}
+                        onClick={() => setPreviewImage(`http://103.118.158.33:5003/uploads/${img.filename}`)}
                       />
                       <div className="absolute top-2 right-2">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -462,6 +615,39 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
+              {/* dates */}
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    className="input-field"
+                    value={taskForm.start_date}
+                    onChange={(e) => setTaskForm({ ...taskForm, start_date: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">End Date</label>
+                  <input
+                    type="date"
+                    className="input-field"
+                    value={taskForm.end_date}
+                    onChange={(e) => setTaskForm({ ...taskForm, end_date: e.target.value })}
+                  />
+                  <p className="text-xs text-gray-400 mt-0.5">Uploads blocked after this date</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Review Deadline</label>
+                  <input
+                    type="date"
+                    className="input-field"
+                    value={taskForm.final_review_date}
+                    onChange={(e) => setTaskForm({ ...taskForm, final_review_date: e.target.value })}
+                  />
+                  <p className="text-xs text-gray-400 mt-0.5">Last date for admin approval</p>
+                </div>
+              </div>
+
               {/* subcategory checkboxes with sub-sub selectors */}
               {subCatsForTask.length > 0 && (
                 <div>
@@ -502,6 +688,143 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* ──── EDIT TASK MODAL ──── */}
+      {showEditTask && editingTask && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-premium-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-900">Edit Task / Job Card</h2>
+              <button onClick={() => setShowEditTask(false)} className="text-gray-400 hover:text-gray-600">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* title */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Task Title *</label>
+                <input
+                  className="input-field"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                  placeholder="e.g. Bangalore Road Mapping – Feb 2026"
+                />
+              </div>
+
+              {/* description */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
+                <textarea
+                  className="input-field"
+                  rows={2}
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  placeholder="Optional task details…"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* category */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Category *</label>
+                  <select
+                    className="select-field"
+                    value={editForm.main_category_id}
+                    onChange={(e) => handleEditCategoryChange(e.target.value)}
+                  >
+                    <option value="">Select Category</option>
+                    {mainCategory.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* total images */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Total Images *</label>
+                  <input
+                    type="number"
+                    min={1}
+                    className="input-field"
+                    value={editForm.total_images}
+                    onChange={(e) => setEditForm({ ...editForm, total_images: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* dates */}
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    className="input-field"
+                    value={editForm.start_date}
+                    onChange={(e) => setEditForm({ ...editForm, start_date: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">End Date</label>
+                  <input
+                    type="date"
+                    className="input-field"
+                    value={editForm.end_date}
+                    onChange={(e) => setEditForm({ ...editForm, end_date: e.target.value })}
+                  />
+                  <p className="text-xs text-gray-400 mt-0.5">Uploads blocked after this date</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Review Deadline</label>
+                  <input
+                    type="date"
+                    className="input-field"
+                    value={editForm.final_review_date}
+                    onChange={(e) => setEditForm({ ...editForm, final_review_date: e.target.value })}
+                  />
+                  <p className="text-xs text-gray-400 mt-0.5">Last date for admin approval</p>
+                </div>
+              </div>
+
+              {/* subcategory checkboxes with sub-sub selectors */}
+              {editSubCats.length > 0 && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Subcategory Requirements
+                  </label>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Select a specific option for each subcategory, or leave "User will choose" for users to pick during upload.
+                  </p>
+                  <div className="space-y-3">
+                    {editSubCats.map((sub) => (
+                      <div key={sub.id} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
+                        <span className="text-sm font-medium text-gray-800 w-36 shrink-0">{sub.name}</span>
+                        <select
+                          className="select-field text-sm py-2"
+                          value={editSelectedSubSubs[sub.id] || ""}
+                          onChange={(e) =>
+                            setEditSelectedSubSubs((prev) => ({ ...prev, [sub.id]: e.target.value }))
+                          }
+                        >
+                          <option value="">— User will choose —</option>
+                          {(editSubSubOptions[sub.id] || []).map((opt) => (
+                            <option key={opt.id} value={opt.id}>{opt.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+              <button onClick={() => setShowEditTask(false)} className="btn-secondary">Cancel</button>
+              <button onClick={updateTask} className="btn-primary">Update Task</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ──── REVIE  W MODAL ──── */}
       {reviewImage && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
@@ -514,7 +837,7 @@ export default function AdminDashboard() {
             </div>
             <div className="p-6 space-y-4">
               <div className="aspect-video bg-gray-200 rounded-lg overflow-hidden">
-                <img src={`http://localhost:5003/uploads/${reviewImage.filename}`} alt="" className="w-full h-full object-contain" />
+                <img src={`http://103.118.158.33:5003/uploads/${reviewImage.filename}`} alt="" className="w-full h-full object-contain" />
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><p className="text-gray-500">System Name</p><p className="font-medium">{reviewImage.renamed_filename}</p></div>
@@ -528,8 +851,8 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
-              <button onClick={() => reject(reviewImage.id)} className="btn-danger">Reject</button>
-              <button onClick={() => approve(reviewImage.id)} className="btn-success">Approve</button>
+              <button onClick={() => reject(reviewImage.id)} className="btn-danger" disabled={approveLoading}>Reject</button>
+              <button onClick={() => approve(reviewImage.id)} className="btn-success" disabled={approveLoading}>{approveLoading ? "⏳ Uploading..." : "Approve"}</button>
             </div>
           </div>
         </div>

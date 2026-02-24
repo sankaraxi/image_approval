@@ -2,6 +2,10 @@ const express = require("express");
 const db = require("../db");
 const verifyAdmin = require("../middleware/verifyAdmin");
 const PDFDocument = require("pdfkit");
+const path = require("path");
+const fs = require("fs");
+const vendorUploadService = require("../services/vendorUploadService");
+
 
 const router = express.Router();
 
@@ -69,6 +73,75 @@ router.get("/report/pdf", verifyAdmin, (req, res) => {
 
     doc.end();
   });
+});
+
+/* ================= APPROVE IMAGE AND UPLOAD TO VENDOR ================= */
+router.post("/approve-image/:imageId", verifyAdmin, async (req, res) => {
+  const imageId = req.params.imageId;
+  try {
+    const [rows] = await db.promise().query("SELECT * FROM images WHERE id = ?", [imageId]);
+    if (!rows || rows.length === 0) return res.status(404).json({ message: "Image not found" });
+
+    const image = rows[0];
+    const uploadsDir = path.join(__dirname, "..", "uploads");
+    const filePath = path.join(uploadsDir, image.filename);
+
+    if (!fs.existsSync(filePath)) {
+      console.error("Approved image file missing:", filePath);
+      return res.status(500).json({ message: "Image file not found on server" });
+    }
+
+    // Request signed URL and upload the file
+    try {
+      await vendorUploadService.uploadApprovedImageToVendor(filePath, image.renamed_filename || image.filename, image.mime_type || "application/octet-stream");
+    } catch (err) {
+      console.error("Vendor upload failed for imageId", imageId, err);
+      return res.status(502).json({ message: "Failed to upload to vendor", error: err.message || err });
+    }
+
+    // Update image status to approved and mark uploaded_to_vendor = true when possible
+    try {
+      await db.promise().query(
+        `UPDATE images
+         SET status = 'approved', approved_at = NOW(), approved_by = ?, uploaded_to_vendor = 1, admin_notes = ?
+         WHERE id = ?`,
+        [req.user.id, req.body.admin_notes || null, imageId]
+      );
+    } catch (updateErr) {
+      // If DB doesn't have uploaded_to_vendor column, fallback to update without it
+      if (updateErr && updateErr.code === "ER_BAD_FIELD_ERROR") {
+        console.warn("images.uploaded_to_vendor column missing — skipping that field");
+        await db.promise().query(
+          `UPDATE images
+           SET status = 'approved', approved_at = NOW(), approved_by = ?, admin_notes = ?
+           WHERE id = ?`,
+          [req.user.id, req.body.admin_notes || null, imageId]
+        );
+      } else {
+        console.error("Failed to update image status for imageId", imageId, updateErr);
+        return res.status(500).json({ message: "Failed to update image status" });
+      }
+    }
+
+    // Increment task approved_count and possibly complete task (best-effort)
+    try {
+      await db.promise().query(
+        `UPDATE tasks t
+         JOIN images i ON i.task_id = t.id
+         SET t.approved_count = t.approved_count + 1,
+             t.status = IF(t.approved_count + 1 >= t.total_images, 'completed', t.status)
+         WHERE i.id = ?`,
+        [imageId]
+      );
+    } catch (taskErr) {
+      console.warn("Failed to update task counts for imageId", imageId, taskErr);
+    }
+
+    res.json({ message: "Image approved and uploaded to vendor" });
+  } catch (err) {
+    console.error("/approve-image error:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
 });
 
 /* ================= IMAGES LIST ================= */

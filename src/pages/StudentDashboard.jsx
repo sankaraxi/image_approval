@@ -27,6 +27,9 @@ export default function StudentDashboard() {
   const [showRequirementsModal, setShowRequirementsModal] = useState(false);
   const [viewingTaskRequirements, setViewingTaskRequirements] = useState(null);
 
+  // preview
+  const [previewImage, setPreviewImage] = useState(null);
+
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -201,6 +204,7 @@ export default function StudentDashboard() {
             {tasks.map((task) => {
               const remaining = task.total_images - task.approved_count;
               const pct = task.total_images > 0 ? Math.round((task.approved_count / task.total_images) * 100) : 0;
+              const isExpired = task.end_date && new Date(task.end_date) < new Date(new Date().toDateString());
               return (
                 <div key={task.id} className="card-premium p-5">
                   <div className="flex justify-between items-start mb-2">
@@ -225,11 +229,24 @@ export default function StudentDashboard() {
                   </div>
                   {task.description && <p className="text-sm text-gray-600 mb-2 line-clamp-2">{task.description}</p>}
                   <p className="text-sm text-gray-500 mb-1">Category: <span className="font-medium">{task.category_name}</span></p>
-                  <p className="text-sm text-gray-500 mb-2">Approved: <span className="font-semibold text-green-600">{task.approved_count || 0}</span> / {task.total_images} images</p>
+                  <p className="text-sm text-gray-500 mb-1">
+                    Uploaded: <span className="font-medium">{task.uploaded_count || 0}</span> &nbsp;|&nbsp;
+                    Approved: <span className="font-semibold text-green-600">{task.approved_count || 0}</span> / {task.total_images}
+                  </p>
+                  {/* Dates */}
+                  {(task.start_date || task.end_date || task.final_review_date) && (
+                    <div className="text-xs text-gray-400 mb-2 space-y-0.5">
+                      {task.start_date && <p>Start: {new Date(task.start_date).toLocaleDateString()}</p>}
+                      {task.end_date && <p className={isExpired ? "text-red-500 font-medium" : ""}>End: {new Date(task.end_date).toLocaleDateString()}{isExpired ? " (Expired)" : ""}</p>}
+                      {task.final_review_date && <p>Review by: {new Date(task.final_review_date).toLocaleDateString()}</p>}
+                    </div>
+                  )}
                   <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
                     <div className={`h-2 rounded-full ${pct >= 100 ? "bg-green-500" : "bg-primary-500"}`} style={{ width: `${Math.min(pct, 100)}%` }} />
                   </div>
-                  {(task.status === "open" || task.status === "in_progress") && (
+                  {isExpired ? (
+                    <p className="w-full text-center text-sm py-2 text-red-500 font-medium">Upload deadline passed</p>
+                  ) : (task.status === "open" || task.status === "in_progress") && (
                     <button onClick={() => startUpload(task)} className="w-full btn-primary text-sm py-2">
                       Upload Images
                     </button>
@@ -262,9 +279,9 @@ export default function StudentDashboard() {
           ) : (
             filteredImages.map((img) => (
               <div key={img.id} className="card-premium group">
-                <div className="relative aspect-video bg-gray-200 overflow-hidden">
+                <div className="relative aspect-video bg-gray-200 overflow-hidden cursor-pointer" onClick={() => setPreviewImage(`http://103.118.158.33:5003/uploads/${img.filename}`)}>
                   <img
-                    src={`http://localhost:5003/uploads/${img.filename}`}
+                    src={`http://103.118.158.33:5003/uploads/${img.filename}`}
                     alt={img.renamed_filename}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
@@ -560,6 +577,32 @@ export default function StudentDashboard() {
                   <p className="font-medium capitalize">{viewingTaskRequirements.status?.replace("_", " ")}</p>
                 </div>
               </div>
+              {/* Dates */}
+              {(viewingTaskRequirements.start_date || viewingTaskRequirements.end_date || viewingTaskRequirements.final_review_date) && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-gray-800 mb-2">Schedule</h4>
+                  <div className="grid grid-cols-3 gap-3 text-sm">
+                    {viewingTaskRequirements.start_date && (
+                      <div>
+                        <p className="text-gray-500">Start Date</p>
+                        <p className="font-medium">{new Date(viewingTaskRequirements.start_date).toLocaleDateString()}</p>
+                      </div>
+                    )}
+                    {viewingTaskRequirements.end_date && (
+                      <div>
+                        <p className="text-gray-500">End Date</p>
+                        <p className="font-medium">{new Date(viewingTaskRequirements.end_date).toLocaleDateString()}</p>
+                      </div>
+                    )}
+                    {viewingTaskRequirements.final_review_date && (
+                      <div>
+                        <p className="text-gray-500">Review Deadline</p>
+                        <p className="font-medium">{new Date(viewingTaskRequirements.final_review_date).toLocaleDateString()}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               {viewingTaskRequirements.requirements && viewingTaskRequirements.requirements.length > 0 && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h4 className="text-sm font-semibold text-blue-900 mb-2">Subcategory Requirements</h4>
@@ -580,6 +623,16 @@ export default function StudentDashboard() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ──── PREVIEW MODAL ──── */}
+      {previewImage && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50" onClick={() => setPreviewImage(null)}>
+          <img src={previewImage} alt="Preview" className="max-w-5xl w-full h-auto rounded-lg" />
+          <button onClick={() => setPreviewImage(null)} className="absolute top-4 right-4 text-white hover:text-gray-300">
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
         </div>
       )}
     </div>

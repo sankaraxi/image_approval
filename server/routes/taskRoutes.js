@@ -15,6 +15,9 @@ router.post("/", verifyAdmin, (req, res) => {
     description,
     main_category_id,
     total_images,
+    start_date,
+    end_date,
+    final_review_date,
     subcategory_requirements // [{ subcategory_id, subsub_category_id | null }, ...]
   } = req.body;
 
@@ -28,9 +31,9 @@ router.post("/", verifyAdmin, (req, res) => {
     subcategory_requirements.every((r) => r.subsub_category_id);
 
   db.query(
-    `INSERT INTO tasks (title, description, main_category_id, total_images, subcategories_specified, created_by)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [title, description || null, main_category_id, total_images, hasSubSpecs, req.user.id],
+    `INSERT INTO tasks (title, description, main_category_id, total_images, subcategories_specified, created_by, start_date, end_date, final_review_date)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [title, description || null, main_category_id, total_images, hasSubSpecs, req.user.id, start_date || null, end_date || null, final_review_date || null],
     (err, result) => {
       if (err) {
         console.error("CREATE TASK ERROR:", err);
@@ -84,6 +87,85 @@ router.post("/", verifyAdmin, (req, res) => {
       } else {
         return res.json({ message: "Task created successfully", taskId });
       }
+    }
+  );
+});
+
+/* =========================================================
+   ADMIN – Update a task
+   ========================================================= */
+router.put("/:id", verifyAdmin, (req, res) => {
+  const taskId = req.params.id;
+  const {
+    title,
+    description,
+    main_category_id,
+    total_images,
+    start_date,
+    end_date,
+    final_review_date,
+    subcategory_requirements // [{ subcategory_id, subsub_category_id | null }, ...]
+  } = req.body;
+
+  if (!title || !main_category_id || !total_images) {
+    return res.status(400).json({ message: "title, main_category_id, and total_images are required" });
+  }
+
+  const hasSubSpecs =
+    Array.isArray(subcategory_requirements) &&
+    subcategory_requirements.length > 0 &&
+    subcategory_requirements.every((r) => r.subsub_category_id);
+
+  db.query(
+    `UPDATE tasks 
+     SET title = ?, description = ?, main_category_id = ?, total_images = ?, subcategories_specified = ?,
+         start_date = ?, end_date = ?, final_review_date = ?
+     WHERE id = ?`,
+    [title, description || null, main_category_id, total_images, hasSubSpecs, start_date || null, end_date || null, final_review_date || null, taskId],
+    (err, result) => {
+      if (err) {
+        console.error("UPDATE TASK ERROR:", err);
+        return res.status(500).json({ message: "Failed to update task" });
+      }
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      // Delete existing subcategory requirements
+      db.query(
+        `DELETE FROM task_subcategory_requirements WHERE task_id = ?`,
+        [taskId],
+        (err2) => {
+          if (err2) {
+            console.error("DELETE REQS ERROR:", err2);
+            return res.status(500).json({ message: "Task updated but failed to update subcategory requirements" });
+          }
+
+          // Insert new subcategory requirements if provided
+          if (Array.isArray(subcategory_requirements) && subcategory_requirements.length > 0) {
+            const rows = subcategory_requirements.map((r) => [
+              taskId,
+              r.subcategory_id,
+              r.subsub_category_id || null
+            ]);
+
+            db.query(
+              `INSERT INTO task_subcategory_requirements (task_id, subcategory_id, subsub_category_id) VALUES ?`,
+              [rows],
+              (err3) => {
+                if (err3) {
+                  console.error("TASK REQS INSERT ERROR:", err3);
+                  return res.status(500).json({ message: "Task updated but failed to save subcategory requirements" });
+                }
+                return res.json({ message: "Task updated successfully", taskId });
+              }
+            );
+          } else {
+            return res.json({ message: "Task updated successfully", taskId });
+          }
+        }
+      );
     }
   );
 });

@@ -100,6 +100,17 @@ router.post("/upload", auth("student"), upload.array("images", 50), (req, res) =
         return res.status(400).json({ message: "Task is no longer accepting uploads" });
       }
 
+      // Block uploads if end_date has passed
+      if (task.end_date) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const endDate = new Date(task.end_date);
+        endDate.setHours(0, 0, 0, 0);
+        if (today > endDate) {
+          return res.status(400).json({ message: "Upload deadline has passed. This task is no longer accepting images." });
+        }
+      }
+
       // Note: Users can upload more than total_images
       // The target is for approved images, not uploaded images
 
