@@ -106,6 +106,83 @@ router.get("/naming-convention/:categoryName", (req, res) => {
   res.json(convention);
 });
 
+/* ---------- Get naming convention FIELDS for a category (dynamic) ---------- */
+router.get("/naming-fields/:categoryId", (req, res) => {
+  db.query(
+    "SELECT * FROM naming_convention_fields WHERE category_id = ? ORDER BY display_order",
+    [req.params.categoryId],
+    (err, rows) => {
+      if (err) return res.status(500).json(err);
+      // Parse field_options JSON strings
+      const parsed = rows.map(r => ({
+        ...r,
+        field_options: r.field_options
+          ? (typeof r.field_options === "string" ? JSON.parse(r.field_options) : r.field_options)
+          : null
+      }));
+      res.json(parsed);
+    }
+  );
+});
+
+/* ---------- Add a naming convention field ---------- */
+router.post("/naming-fields", (req, res) => {
+  const { category_id, field_name, field_label, field_type, field_options, is_required, display_order, placeholder, separator } = req.body;
+  if (!category_id || !field_name || !field_label) {
+    return res.status(400).json({ message: "category_id, field_name, and field_label are required" });
+  }
+  db.query(
+    `INSERT INTO naming_convention_fields (category_id, field_name, field_label, field_type, field_options, is_required, display_order, placeholder, separator)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      category_id, field_name, field_label,
+      field_type || 'text',
+      field_options ? JSON.stringify(field_options) : null,
+      is_required !== undefined ? is_required : 1,
+      display_order || 0,
+      placeholder || null,
+      separator !== undefined ? separator : '_'
+    ],
+    (err, result) => {
+      if (err) return res.status(500).json(err);
+      res.json({ message: "Naming field added", id: result.insertId });
+    }
+  );
+});
+
+/* ---------- Update a naming convention field ---------- */
+router.put("/naming-fields/:id", (req, res) => {
+  const { field_name, field_label, field_type, field_options, is_required, display_order, placeholder, separator } = req.body;
+  db.query(
+    `UPDATE naming_convention_fields
+     SET field_name = ?, field_label = ?, field_type = ?, field_options = ?,
+         is_required = ?, display_order = ?, placeholder = ?, separator = ?
+     WHERE id = ?`,
+    [
+      field_name, field_label,
+      field_type || 'text',
+      field_options ? JSON.stringify(field_options) : null,
+      is_required !== undefined ? is_required : 1,
+      display_order || 0,
+      placeholder || null,
+      separator !== undefined ? separator : '_',
+      req.params.id
+    ],
+    (err) => {
+      if (err) return res.status(500).json(err);
+      res.json({ message: "Naming field updated" });
+    }
+  );
+});
+
+/* ---------- Delete a naming convention field ---------- */
+router.delete("/naming-fields/:id", (req, res) => {
+  db.query("DELETE FROM naming_convention_fields WHERE id = ?", [req.params.id], (err) => {
+    if (err) return res.status(500).json(err);
+    res.json({ message: "Naming field deleted" });
+  });
+});
+
 /* ---------- Add category ---------- */
 router.post("/", (req, res) => {
   const { name, level, parent_id, naming_prefix, display_order } = req.body;

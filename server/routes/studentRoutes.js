@@ -46,6 +46,39 @@ function buildRetailName(meta, index) {
   return `${client}_${storeId}_${category}_${product}_${shelf}_${angle}_${date}_${seq}.${ext}`;
 }
 
+function buildAgriName(meta, index) {
+  const cropName          = (meta.cropName || "Crop").replace(/\s+/g, "");
+  const state             = (meta.state || "State").replace(/\s+/g, "");
+  const district          = (meta.district || "District").replace(/\s+/g, "");
+  const date              = meta.date || (() => {
+    const d = new Date();
+    return String(d.getDate()).padStart(2, "0") +
+           String(d.getMonth() + 1).padStart(2, "0") +
+           d.getFullYear();
+  })();
+  const observedCondition = (meta.observedCondition || "normalGrowth").replace(/\s+/g, "");
+  const ext               = meta.ext || "jpg";
+  return `${cropName}_${state}_${district}_${date}_${observedCondition}.${ext}`;
+}
+
+/**
+ * Build a dynamic filename from naming_convention_fields stored in DB.
+ * @param {Array} fields - ordered naming_convention_fields rows
+ * @param {Object} meta - user-provided metadata values
+ * @param {number} index - file index for auto-generated fields
+ * @returns {string} the constructed filename
+ */
+function buildDynamicName(fields, meta, index) {
+  const ext = meta.ext || "jpg";
+  const parts = fields
+    .filter(f => f.field_name !== 'frame' && f.field_name !== 'sequence') // auto fields
+    .map(f => {
+      let val = meta[f.field_name] || f.placeholder || "Unknown";
+      return String(val).replace(/\s+/g, "");
+    });
+  return parts.join("_") + `.${ext}`;
+}
+
 /* ======== Get student's images ======== */
 router.get("/images", auth("student"), (req, res) => {
   const query = `
@@ -115,6 +148,7 @@ router.post("/upload", auth("student"), upload.array("images", 50), (req, res) =
       // The target is for approved images, not uploaded images
 
       const isMobility = task.category_name === "Mobility";
+      const isAgri     = task.category_name === "Agri";
 
       db.query(
         "SELECT COUNT(*) AS cnt FROM images WHERE task_id = ?",
@@ -131,9 +165,22 @@ router.post("/upload", auth("student"), upload.array("images", 50), (req, res) =
             const ext = path.extname(file.originalname).replace(".", "") || "jpg";
             const metaWithExt = { ...meta, ext };
 
-            const conventionName = isMobility
-              ? buildMobilityName(metaWithExt, idx)
-              : buildRetailName(metaWithExt, idx);
+            let conventionName;
+            if (isMobility) {
+              conventionName = buildMobilityName(metaWithExt, idx);
+            } else if (isAgri) {
+              conventionName = buildAgriName(metaWithExt, idx);
+            } else if (task.category_name === "Retail") {
+              conventionName = buildRetailName(metaWithExt, idx);
+            } else {
+              // Dynamic: build from naming_convention_fields via meta
+              // Fallback: use prefix + joined meta values
+              const prefix = (task.naming_prefix || task.category_name.substring(0, 3).toUpperCase());
+              const vals = Object.entries(metaWithExt)
+                .filter(([k]) => !['ext', 'studentSubSelections', 'generatedName', 'index'].includes(k))
+                .map(([, v]) => String(v).replace(/\s+/g, ''));
+              conventionName = `${prefix}_${vals.join('_')}_${String(idx).padStart(3, '0')}.${ext}`;
+            }
 
             renameOps.push({ oldPath: file.path, newName: conventionName });
 

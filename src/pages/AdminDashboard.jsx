@@ -12,6 +12,20 @@ export default function AdminDashboard() {
   const [taskImages, setTaskImages] = useState([]);
   const [filterStatus, setFilterStatus] = useState("all");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("tasks"); // "tasks" | "categories"
+
+  // ── Category Manager state ──
+  const [allCategoriesFlat, setAllCategoriesFlat] = useState([]);
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCatForm, setNewCatForm] = useState({ name: "", level: 1, parent_id: "", naming_prefix: "", display_order: 0 });
+  const [namingFields, setNamingFields] = useState([]); // for selected main category
+  const [selectedManageCategory, setSelectedManageCategory] = useState(null); // main cat being managed
+  const [showAddNamingField, setShowAddNamingField] = useState(false);
+  const [newFieldForm, setNewFieldForm] = useState({
+    field_name: "", field_label: "", field_type: "text", field_options: "",
+    is_required: true, display_order: 0, placeholder: "", separator: "_"
+  });
+  const [editingField, setEditingField] = useState(null);
 
   // create-task modal
   const [showCreateTask, setShowCreateTask] = useState(false);
@@ -57,7 +71,107 @@ export default function AdminDashboard() {
     try { const res = await api.get("/admin/images"); setTaskImages(res.data); } catch (e) { console.error(e); }
   };
 
-  useEffect(() => { loadTasks(); loadStats(); loadCategories(); }, []);
+  // ── Category Manager loaders ──
+  const loadAllCategoriesFlat = async () => {
+    try { const res = await api.get("/categories"); setAllCategoriesFlat(res.data); } catch (e) { console.error(e); }
+  };
+  const loadNamingFields = async (categoryId) => {
+    try { const res = await api.get(`/categories/naming-fields/${categoryId}`); setNamingFields(res.data); } catch (e) { console.error(e); }
+  };
+
+  const addCategory = async () => {
+    if (!newCatForm.name) return alert("Name is required");
+    try {
+      await api.post("/categories", {
+        name: newCatForm.name,
+        level: parseInt(newCatForm.level),
+        parent_id: newCatForm.parent_id ? parseInt(newCatForm.parent_id) : null,
+        naming_prefix: newCatForm.naming_prefix || null,
+        display_order: parseInt(newCatForm.display_order) || 0
+      });
+      setShowAddCategory(false);
+      setNewCatForm({ name: "", level: 1, parent_id: "", naming_prefix: "", display_order: 0 });
+      loadCategories();
+      loadAllCategoriesFlat();
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to add category");
+    }
+  };
+
+  const deleteCategory = async (id) => {
+    if (!confirm("Delete this category and all its children?")) return;
+    try {
+      await api.delete(`/categories/${id}`);
+      loadCategories();
+      loadAllCategoriesFlat();
+      if (selectedManageCategory?.id === id) {
+        setSelectedManageCategory(null);
+        setNamingFields([]);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to delete category");
+    }
+  };
+
+  const addNamingField = async () => {
+    if (!newFieldForm.field_name || !newFieldForm.field_label) return alert("Field name and label are required");
+    const payload = {
+      category_id: selectedManageCategory.id,
+      field_name: newFieldForm.field_name,
+      field_label: newFieldForm.field_label,
+      field_type: newFieldForm.field_type,
+      field_options: newFieldForm.field_options ? newFieldForm.field_options.split(",").map(s => s.trim()).filter(Boolean) : null,
+      is_required: newFieldForm.is_required ? 1 : 0,
+      display_order: parseInt(newFieldForm.display_order) || 0,
+      placeholder: newFieldForm.placeholder || null,
+      separator: newFieldForm.separator || "_"
+    };
+    try {
+      if (editingField) {
+        await api.put(`/categories/naming-fields/${editingField.id}`, payload);
+      } else {
+        await api.post("/categories/naming-fields", payload);
+      }
+      setShowAddNamingField(false);
+      setEditingField(null);
+      setNewFieldForm({ field_name: "", field_label: "", field_type: "text", field_options: "", is_required: true, display_order: 0, placeholder: "", separator: "_" });
+      loadNamingFields(selectedManageCategory.id);
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to save naming field");
+    }
+  };
+
+  const deleteNamingField = async (id) => {
+    if (!confirm("Delete this naming field?")) return;
+    try {
+      await api.delete(`/categories/naming-fields/${id}`);
+      loadNamingFields(selectedManageCategory.id);
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to delete naming field");
+    }
+  };
+
+  const openEditNamingField = (field) => {
+    setEditingField(field);
+    setNewFieldForm({
+      field_name: field.field_name,
+      field_label: field.field_label,
+      field_type: field.field_type,
+      field_options: field.field_options ? field.field_options.join(", ") : "",
+      is_required: !!field.is_required,
+      display_order: field.display_order,
+      placeholder: field.placeholder || "",
+      separator: field.separator || "_"
+    });
+    setShowAddNamingField(true);
+  };
+
+  const selectManageCategory = (cat) => {
+    setSelectedManageCategory(cat);
+    loadNamingFields(cat.id);
+  };
+
+  useEffect(() => { loadTasks(); loadStats(); loadCategories(); loadAllCategoriesFlat(); }, []);
 
   // URL-based task navigation
   useEffect(() => {
@@ -327,6 +441,14 @@ export default function AdminDashboard() {
                   ← Back to Tasks
                 </button>
               )}
+              <button
+                onClick={() => { setActiveTab("tasks"); setSelectedManageCategory(null); }}
+                className={`px-4 py-2 rounded-md font-medium text-sm transition-all ${activeTab === "tasks" ? "bg-primary-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}
+              >Tasks</button>
+              <button
+                onClick={() => { setActiveTab("categories"); loadAllCategoriesFlat(); }}
+                className={`px-4 py-2 rounded-md font-medium text-sm transition-all ${activeTab === "categories" ? "bg-primary-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}
+              >Category Manager</button>
               <button onClick={downloadPdfReport} className="btn-secondary flex items-center space-x-2">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                 <span>PDF Report</span>
@@ -350,6 +472,14 @@ export default function AdminDashboard() {
                   ← Back to Tasks
                 </button>
               )}
+              <button
+                onClick={() => { setActiveTab("tasks"); setMobileMenuOpen(false); }}
+                className={`w-full px-4 py-2 rounded-md font-medium text-sm text-left ${activeTab === "tasks" ? "bg-primary-100 text-primary-700" : "text-gray-600"}`}
+              >Tasks</button>
+              <button
+                onClick={() => { setActiveTab("categories"); loadAllCategoriesFlat(); setMobileMenuOpen(false); }}
+                className={`w-full px-4 py-2 rounded-md font-medium text-sm text-left ${activeTab === "categories" ? "bg-primary-100 text-primary-700" : "text-gray-600"}`}
+              >Category Manager</button>
               <button
                 onClick={() => { downloadPdfReport(); setMobileMenuOpen(false); }}
                 className="w-full btn-secondary flex items-center space-x-2 justify-center"
@@ -377,7 +507,7 @@ export default function AdminDashboard() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* ──── Stats ──── */}
-        {stats && !selectedTask && (
+        {stats && !selectedTask && activeTab === "tasks" && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             {[
               { label: "Total Tasks", value: stats.total_tasks, color: "text-gray-900" },
@@ -394,7 +524,7 @@ export default function AdminDashboard() {
         )}
 
         {/* ──── TASK LIST VIEW ──── */}
-        {!selectedTask && (
+        {!selectedTask && activeTab === "tasks" && (
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-gray-800">All Tasks</h2>
             {tasks.length === 0 ? (
@@ -465,7 +595,7 @@ export default function AdminDashboard() {
         )}
 
         {/* ──── TASK DETAIL VIEW ──── */}
-        {selectedTask && (
+        {selectedTask && activeTab === "tasks" && (
           <div>
             <div className="bg-white rounded-xl shadow-md p-6 mb-6">
               <div className="flex justify-between items-start">
@@ -549,7 +679,271 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
+        {/* ──── CATEGORY MANAGER TAB ──── */}
+        {activeTab === "categories" && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-gray-800">Category Manager</h2>
+              <button onClick={() => setShowAddCategory(true)} className="btn-primary flex items-center space-x-2 text-sm">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                <span>Add Category</span>
+              </button>
+            </div>
+
+            {/* Category Hierarchy */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left: Category Tree */}
+              <div className="lg:col-span-1 space-y-4">
+                {categories.map((mainCat) => (
+                  <div key={mainCat.id} className={`card p-4 cursor-pointer transition-all ${selectedManageCategory?.id === mainCat.id ? "ring-2 ring-primary-500 bg-primary-50" : "hover:shadow-md"}`}>
+                    <div className="flex justify-between items-center" onClick={() => selectManageCategory(mainCat)}>
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{mainCat.name}</h3>
+                        <p className="text-xs text-gray-500">Prefix: {mainCat.namingPrefix || "—"} | {mainCat.subCategories?.length || 0} sub-categories</p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="px-2 py-0.5 bg-gray-100 rounded text-xs font-medium text-gray-600">Level 1</span>
+                        <button onClick={(e) => { e.stopPropagation(); deleteCategory(mainCat.id); }} className="p-1 text-red-400 hover:text-red-600" title="Delete">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                      </div>
+                    </div>
+                    {/* Show subcategories inline */}
+                    {mainCat.subCategories && mainCat.subCategories.length > 0 && (
+                      <div className="mt-3 space-y-2 border-t pt-3">
+                        {mainCat.subCategories.map((sub) => (
+                          <div key={sub.id} className="ml-3">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm font-medium text-gray-700">{sub.name}</span>
+                              <button onClick={(e) => { e.stopPropagation(); deleteCategory(sub.id); }} className="p-0.5 text-red-300 hover:text-red-500">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                              </button>
+                            </div>
+                            {sub.subSubCategories && sub.subSubCategories.length > 0 && (
+                              <div className="ml-4 mt-1 flex flex-wrap gap-1">
+                                {sub.subSubCategories.map((ss) => (
+                                  <span key={ss.id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded text-xs text-gray-600">
+                                    {ss.name}
+                                    <button onClick={(e) => { e.stopPropagation(); deleteCategory(ss.id); }} className="text-red-300 hover:text-red-500">
+                                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                    </button>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Right: Naming Convention Fields for selected category */}
+              <div className="lg:col-span-2">
+                {selectedManageCategory ? (
+                  <div className="card p-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">{selectedManageCategory.name} – Naming Convention</h3>
+                        <p className="text-sm text-gray-500">Define the fields that make up the file naming pattern for this category</p>
+                      </div>
+                      <button onClick={() => { setEditingField(null); setNewFieldForm({ field_name: "", field_label: "", field_type: "text", field_options: "", is_required: true, display_order: namingFields.length + 1, placeholder: "", separator: "_" }); setShowAddNamingField(true); }} className="btn-primary text-sm">
+                        + Add Field
+                      </button>
+                    </div>
+
+                    {/* Preview format */}
+                    {namingFields.length > 0 && (
+                      <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p className="text-xs font-medium text-blue-800 mb-1">Filename Preview:</p>
+                        <code className="text-sm text-blue-700">
+                          {namingFields.map((f, i) => `{${f.field_name}}`).join("_")}.jpg
+                        </code>
+                        <p className="text-xs text-blue-600 mt-1">
+                          Example: {namingFields.map((f) => f.placeholder || f.field_label).join("_")}.jpg
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Fields list */}
+                    {namingFields.length === 0 ? (
+                      <div className="text-center py-8 text-gray-400">
+                        <p>No naming fields defined yet. Click "+ Add Field" to create the naming convention.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {namingFields.map((field, idx) => (
+                          <div key={field.id} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3 group">
+                            <span className="w-8 h-8 flex items-center justify-center bg-primary-100 text-primary-700 rounded-full text-sm font-bold shrink-0">{idx + 1}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-medium text-gray-900 text-sm">{field.field_label}</span>
+                                <code className="text-xs bg-gray-200 px-1.5 py-0.5 rounded">{field.field_name}</code>
+                                <span className={`text-xs px-1.5 py-0.5 rounded ${field.field_type === 'select' ? 'bg-purple-100 text-purple-700' : field.field_type === 'date' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>{field.field_type}</span>
+                                {field.is_required ? <span className="text-xs text-red-500">*required</span> : <span className="text-xs text-gray-400">optional</span>}
+                              </div>
+                              {field.field_options && field.field_options.length > 0 && (
+                                <div className="mt-1 flex flex-wrap gap-1">
+                                  {field.field_options.map((opt, oi) => (
+                                    <span key={oi} className="text-xs bg-white border px-1.5 py-0.5 rounded">{opt}</span>
+                                  ))}
+                                </div>
+                              )}
+                              {field.placeholder && <p className="text-xs text-gray-400 mt-0.5">Placeholder: {field.placeholder}</p>}
+                            </div>
+                            <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => openEditNamingField(field)} className="p-1.5 text-blue-500 hover:bg-blue-100 rounded" title="Edit">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                              </button>
+                              <button onClick={() => deleteNamingField(field.id)} className="p-1.5 text-red-500 hover:bg-red-100 rounded" title="Delete">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                              </button>
+                            </div>
+                            {idx < namingFields.length - 1 && (
+                              <span className="text-gray-300 font-mono text-lg shrink-0" title={`Separator: ${field.separator || '_'}`}>{field.separator || '_'}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="card p-12 text-center text-gray-400">
+                    <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                    <p className="text-lg">Select a main category to manage its naming convention fields</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
+
+      {/* ──── ADD CATEGORY MODAL ──── */}
+      {showAddCategory && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-premium-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-900">Add Category</h2>
+              <button onClick={() => setShowAddCategory(false)} className="text-gray-400 hover:text-gray-600">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Category Name *</label>
+                <input className="input-field" value={newCatForm.name} onChange={(e) => setNewCatForm({ ...newCatForm, name: e.target.value })} placeholder="e.g. Agri, Healthcare" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Level *</label>
+                <select className="select-field" value={newCatForm.level} onChange={(e) => setNewCatForm({ ...newCatForm, level: parseInt(e.target.value), parent_id: "" })}>
+                  <option value={1}>Level 1 – Main Category</option>
+                  <option value={2}>Level 2 – Sub Category</option>
+                  <option value={3}>Level 3 – Sub-Sub Category</option>
+                </select>
+              </div>
+              {newCatForm.level > 1 && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Parent Category *</label>
+                  <select className="select-field" value={newCatForm.parent_id} onChange={(e) => setNewCatForm({ ...newCatForm, parent_id: e.target.value })}>
+                    <option value="">Select Parent</option>
+                    {allCategoriesFlat
+                      .filter(c => c.level === newCatForm.level - 1)
+                      .map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))
+                    }
+                  </select>
+                </div>
+              )}
+              {newCatForm.level === 1 && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Naming Prefix</label>
+                  <input className="input-field" value={newCatForm.naming_prefix} onChange={(e) => setNewCatForm({ ...newCatForm, naming_prefix: e.target.value.toUpperCase() })} placeholder="e.g. AGRI, MOB" maxLength={10} />
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Display Order</label>
+                <input type="number" min={0} className="input-field" value={newCatForm.display_order} onChange={(e) => setNewCatForm({ ...newCatForm, display_order: parseInt(e.target.value) || 0 })} />
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+              <button onClick={() => setShowAddCategory(false)} className="btn-secondary">Cancel</button>
+              <button onClick={addCategory} className="btn-primary">Add Category</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ──── ADD/EDIT NAMING FIELD MODAL ──── */}
+      {showAddNamingField && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-premium-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-900">{editingField ? "Edit" : "Add"} Naming Field</h2>
+              <button onClick={() => { setShowAddNamingField(false); setEditingField(null); }} className="text-gray-400 hover:text-gray-600">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Field Name (key) *</label>
+                  <input className="input-field" value={newFieldForm.field_name} onChange={(e) => setNewFieldForm({ ...newFieldForm, field_name: e.target.value.replace(/\s+/g, "") })} placeholder="e.g. cropName, city" />
+                  <p className="text-xs text-gray-400 mt-0.5">Internal key, no spaces</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Display Label *</label>
+                  <input className="input-field" value={newFieldForm.field_label} onChange={(e) => setNewFieldForm({ ...newFieldForm, field_label: e.target.value })} placeholder="e.g. Crop Name, City Code" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Field Type</label>
+                  <select className="select-field" value={newFieldForm.field_type} onChange={(e) => setNewFieldForm({ ...newFieldForm, field_type: e.target.value })}>
+                    <option value="text">Text Input</option>
+                    <option value="select">Dropdown Select</option>
+                    <option value="date">Date</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Separator</label>
+                  <input className="input-field" value={newFieldForm.separator} onChange={(e) => setNewFieldForm({ ...newFieldForm, separator: e.target.value })} placeholder="_" maxLength={3} />
+                  <p className="text-xs text-gray-400 mt-0.5">Char between this and next field</p>
+                </div>
+              </div>
+              {newFieldForm.field_type === "select" && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Options (comma-separated)</label>
+                  <textarea className="input-field" rows={2} value={newFieldForm.field_options} onChange={(e) => setNewFieldForm({ ...newFieldForm, field_options: e.target.value })} placeholder="e.g. healthyPlant, diseasedPlant, pestAffected" />
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Placeholder / Hint</label>
+                <input className="input-field" value={newFieldForm.placeholder} onChange={(e) => setNewFieldForm({ ...newFieldForm, placeholder: e.target.value })} placeholder="e.g. Enter crop name" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Display Order</label>
+                  <input type="number" min={0} className="input-field" value={newFieldForm.display_order} onChange={(e) => setNewFieldForm({ ...newFieldForm, display_order: parseInt(e.target.value) || 0 })} />
+                </div>
+                <div className="flex items-center pt-6">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" checked={newFieldForm.is_required} onChange={(e) => setNewFieldForm({ ...newFieldForm, is_required: e.target.checked })} className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                    <span className="text-sm font-medium text-gray-700">Required field</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+              <button onClick={() => { setShowAddNamingField(false); setEditingField(null); }} className="btn-secondary">Cancel</button>
+              <button onClick={addNamingField} className="btn-primary">{editingField ? "Update" : "Add"} Field</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ──── CREATE TASK MODAL ──── */}
       {showCreateTask && (

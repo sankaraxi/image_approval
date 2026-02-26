@@ -18,6 +18,8 @@ export default function StudentDashboard() {
 
   // naming meta fields – filled by the student
   const [namingMeta, setNamingMeta] = useState({});
+  // dynamic naming convention fields from DB
+  const [dynamicNamingFields, setDynamicNamingFields] = useState([]);
 
   // subcategory selections (when admin didn't specify)
   const [studentSubSelections, setStudentSubSelections] = useState({});
@@ -75,6 +77,7 @@ export default function StudentDashboard() {
     setNamingMeta({});
     setStudentSubSelections({});
     setSubSubOptions({});
+    setDynamicNamingFields([]);
 
     // fetch task detail with requirements
     try {
@@ -94,6 +97,12 @@ export default function StudentDashboard() {
         );
         setSubSubOptions(opts);
       }
+
+      // Load dynamic naming convention fields for this category
+      try {
+        const fieldsRes = await api.get(`/categories/naming-fields/${task.main_category_id}`);
+        setDynamicNamingFields(fieldsRes.data);
+      } catch { setDynamicNamingFields([]); }
     } catch {
       setTaskDetail(null);
     }
@@ -106,15 +115,30 @@ export default function StudentDashboard() {
     if (!files.length) return alert("Please select images to upload");
     if (!uploadTask) return;
 
-    // Validate that all required naming fields are filled
-    const isMobility = uploadTask.category_name === "Mobility";
-    if (isMobility) {
-      if (!namingMeta.city || !namingMeta.camera) {
-        return alert("Please fill in all naming convention fields (City, Camera)");
+    // Validate naming fields dynamically
+    if (dynamicNamingFields.length > 0) {
+      const missingFields = dynamicNamingFields
+        .filter(f => f.is_required && f.field_name !== 'frame' && f.field_name !== 'sequence')
+        .filter(f => !namingMeta[f.field_name]);
+      if (missingFields.length > 0) {
+        return alert(`Please fill in: ${missingFields.map(f => f.field_label).join(', ')}`);
       }
     } else {
-      if (!namingMeta.client || !namingMeta.storeId || !namingMeta.category || !namingMeta.product || !namingMeta.shelf || !namingMeta.angle) {
-        return alert("Please fill in all naming convention fields");
+      // Legacy fallback for categories without dynamic fields
+      const isMobility = uploadTask.category_name === "Mobility";
+      const isAgriCat = uploadTask.category_name === "Agri";
+      if (isMobility) {
+        if (!namingMeta.city || !namingMeta.camera) {
+          return alert("Please fill in all naming convention fields (City, Camera)");
+        }
+      } else if (isAgriCat) {
+        if (!namingMeta.cropName || !namingMeta.state || !namingMeta.district || !namingMeta.observedCondition) {
+          return alert("Please fill in all naming convention fields (Crop Name, State, District, Observed Condition)");
+        }
+      } else {
+        if (!namingMeta.client || !namingMeta.storeId || !namingMeta.category || !namingMeta.product || !namingMeta.shelf || !namingMeta.angle) {
+          return alert("Please fill in all naming convention fields");
+        }
       }
     }
 
@@ -156,6 +180,7 @@ export default function StudentDashboard() {
     filterStatus === "all" ? myImages : myImages.filter((img) => img.status === filterStatus);
 
   const isMob = uploadTask?.category_name === "Mobility";
+  const isAgri = uploadTask?.category_name === "Agri";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -345,9 +370,26 @@ export default function StudentDashboard() {
                   />
                 </label>
                 {files.length > 0 && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    {files.map((f) => f.name).join(", ")}
-                  </p>
+                  <div className="mt-3 grid grid-cols-4 gap-2">
+                    {files.map((f, idx) => (
+                      <div key={idx} className="relative group">
+                        <img
+                          src={URL.createObjectURL(f)}
+                          alt={f.name}
+                          className="w-full h-24 object-cover rounded-lg border border-gray-200"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setFiles(files.filter((_, i) => i !== idx))}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                          disabled={uploading}
+                        >
+                          ×
+                        </button>
+                        <p className="text-[10px] text-gray-500 truncate mt-1" title={f.name}>{f.name}</p>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
 
@@ -396,135 +438,255 @@ export default function StudentDashboard() {
                 </div>
               )}
 
-              {/* ── Naming Convention Fields ── */}
+              {/* ── Naming Convention Fields (Dynamic) ── */}
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                 <h3 className="text-sm font-semibold text-gray-800 mb-1">Naming Convention Details *</h3>
-                <p className="text-xs text-gray-500 mb-3">
-                  {isMob
-                    ? "Format: MOB_City_Camera_Date_FrameID.jpg"
-                    : "Format: Client_StoreID_Category_Product_Shelf_Angle_Date_Sequence.jpg"}
-                </p>
-
-                {isMob ? (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">City Code (3 letters) *</label>
-                      <input
-                        className="input-field text-sm py-2"
-                        placeholder="e.g. BLR"
-                        maxLength={3}
-                        value={namingMeta.city || ""}
-                        onChange={(e) => setNamingMeta({ ...namingMeta, city: e.target.value.toUpperCase() })}
-                      />
+                {dynamicNamingFields.length > 0 ? (
+                  <>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Format: {dynamicNamingFields.filter(f => f.field_name !== 'frame' && f.field_name !== 'sequence').map(f => `{${f.field_label}}`).join("_")}.jpg
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {dynamicNamingFields
+                        .filter(f => f.field_name !== 'frame' && f.field_name !== 'sequence')
+                        .map((field) => (
+                          <div key={field.id}>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              {field.field_label} {field.is_required ? '*' : ''}
+                            </label>
+                            {field.field_type === 'select' && field.field_options ? (
+                              <select
+                                className="select-field text-sm py-2"
+                                value={namingMeta[field.field_name] || ""}
+                                onChange={(e) => setNamingMeta({ ...namingMeta, [field.field_name]: e.target.value })}
+                              >
+                                <option value="">Select</option>
+                                {field.field_options.map((opt) => (
+                                  <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                              </select>
+                            ) : field.field_type === 'date' ? (
+                              <input
+                                className="input-field text-sm py-2"
+                                placeholder={field.placeholder || "DDMMYYYY"}
+                                maxLength={8}
+                                value={namingMeta[field.field_name] || ""}
+                                onChange={(e) => setNamingMeta({ ...namingMeta, [field.field_name]: e.target.value })}
+                              />
+                            ) : (
+                              <input
+                                className="input-field text-sm py-2"
+                                placeholder={field.placeholder || ""}
+                                value={namingMeta[field.field_name] || ""}
+                                onChange={(e) => setNamingMeta({ ...namingMeta, [field.field_name]: e.target.value })}
+                              />
+                            )}
+                          </div>
+                        ))}
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Camera Position *</label>
-                      <select
-                        className="select-field text-sm py-2"
-                        value={namingMeta.camera || ""}
-                        onChange={(e) => setNamingMeta({ ...namingMeta, camera: e.target.value })}
-                      >
-                        <option value="">Select</option>
-                        <option value="FC">FC – Front Camera</option>
-                        <option value="RC">RC – Rear Camera</option>
-                        <option value="LC">LC – Left Camera</option>
-                        <option value="RIC">RIC – Right Inside Camera</option>
-                      </select>
+                    {/* Dynamic Preview */}
+                    <div className="mt-3 bg-white border border-gray-200 rounded p-3">
+                      <p className="text-xs font-medium text-gray-500 mb-1">Preview (first image):</p>
+                      <code className="text-sm text-primary-700">
+                        {dynamicNamingFields
+                          .filter(f => f.field_name !== 'frame' && f.field_name !== 'sequence')
+                          .map((f) => namingMeta[f.field_name] || `{${f.field_name}}`)
+                          .join("_")}.jpg
+                      </code>
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Date (YYYYMMDD)</label>
-                      <input
-                        className="input-field text-sm py-2"
-                        placeholder={new Date().toISOString().slice(0, 10).replace(/-/g, "")}
-                        maxLength={8}
-                        value={namingMeta.date || ""}
-                        onChange={(e) => setNamingMeta({ ...namingMeta, date: e.target.value })}
-                      />
-                    </div>
-                  </div>
+                  </>
                 ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Client / Brand *</label>
-                      <input
-                        className="input-field text-sm py-2"
-                        placeholder="e.g. Reliance"
-                        value={namingMeta.client || ""}
-                        onChange={(e) => setNamingMeta({ ...namingMeta, client: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Store ID *</label>
-                      <input
-                        className="input-field text-sm py-2"
-                        placeholder="e.g. STR1023"
-                        value={namingMeta.storeId || ""}
-                        onChange={(e) => setNamingMeta({ ...namingMeta, storeId: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Product Category *</label>
-                      <input
-                        className="input-field text-sm py-2"
-                        placeholder="e.g. Beverages"
-                        value={namingMeta.category || ""}
-                        onChange={(e) => setNamingMeta({ ...namingMeta, category: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Product / SKU *</label>
-                      <input
-                        className="input-field text-sm py-2"
-                        placeholder="e.g. CocaCola_330ml"
-                        value={namingMeta.product || ""}
-                        onChange={(e) => setNamingMeta({ ...namingMeta, product: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Shelf *</label>
-                      <input
-                        className="input-field text-sm py-2"
-                        placeholder="e.g. Shelf2"
-                        value={namingMeta.shelf || ""}
-                        onChange={(e) => setNamingMeta({ ...namingMeta, shelf: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Capture Angle *</label>
-                      <select
-                        className="select-field text-sm py-2"
-                        value={namingMeta.angle || ""}
-                        onChange={(e) => setNamingMeta({ ...namingMeta, angle: e.target.value })}
-                      >
-                        <option value="">Select</option>
-                        <option value="Front">Front</option>
-                        <option value="Left">Left</option>
-                        <option value="Right">Right</option>
-                        <option value="Top">Top</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Date (YYYYMMDD)</label>
-                      <input
-                        className="input-field text-sm py-2"
-                        placeholder={new Date().toISOString().slice(0, 10).replace(/-/g, "")}
-                        maxLength={8}
-                        value={namingMeta.date || ""}
-                        onChange={(e) => setNamingMeta({ ...namingMeta, date: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                )}
+                  <>
+                    <p className="text-xs text-gray-500 mb-3">
+                      {isMob
+                        ? "Format: MOB_City_Camera_Date_FrameID.jpg"
+                        : isAgri
+                          ? "Format: CropName_State_District_DDMMYYYY_ObservedCondition.jpg"
+                          : "Format: Client_StoreID_Category_Product_Shelf_Angle_Date_Sequence.jpg"}
+                    </p>
 
-                {/* Preview generated name */}
-                <div className="mt-3 bg-white border border-gray-200 rounded p-3">
-                  <p className="text-xs font-medium text-gray-500 mb-1">Preview (first image):</p>
-                  <code className="text-sm text-primary-700">
-                    {isMob
-                      ? `MOB_${(namingMeta.city || "___").substring(0, 3)}_${namingMeta.camera || "__"}_${namingMeta.date || "YYYYMMDD"}_F001.jpg`
-                      : `${namingMeta.client || "Client"}_${namingMeta.storeId || "STR0000"}_${namingMeta.category || "Category"}_${namingMeta.product || "Product"}_${namingMeta.shelf || "Shelf1"}_${namingMeta.angle || "Front"}_${namingMeta.date || "YYYYMMDD"}_01.jpg`}
-                  </code>
-                </div>
+                    {isMob ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">City Code (3 letters) *</label>
+                          <input
+                            className="input-field text-sm py-2"
+                            placeholder="e.g. BLR"
+                            maxLength={3}
+                            value={namingMeta.city || ""}
+                            onChange={(e) => setNamingMeta({ ...namingMeta, city: e.target.value.toUpperCase() })}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Camera Position *</label>
+                          <select
+                            className="select-field text-sm py-2"
+                            value={namingMeta.camera || ""}
+                            onChange={(e) => setNamingMeta({ ...namingMeta, camera: e.target.value })}
+                          >
+                            <option value="">Select</option>
+                            <option value="FC">FC – Front Camera</option>
+                            <option value="RC">RC – Rear Camera</option>
+                            <option value="LC">LC – Left Camera</option>
+                            <option value="RIC">RIC – Right Inside Camera</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Date (YYYYMMDD)</label>
+                          <input
+                            className="input-field text-sm py-2"
+                            placeholder={new Date().toISOString().slice(0, 10).replace(/-/g, "")}
+                            maxLength={8}
+                            value={namingMeta.date || ""}
+                            onChange={(e) => setNamingMeta({ ...namingMeta, date: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                    ) : isAgri ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Crop Name *</label>
+                          <input
+                            className="input-field text-sm py-2"
+                            placeholder="e.g. Chilli, Rice, Cotton"
+                            value={namingMeta.cropName || ""}
+                            onChange={(e) => setNamingMeta({ ...namingMeta, cropName: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">State *</label>
+                          <input
+                            className="input-field text-sm py-2"
+                            placeholder="e.g. Kerala, TamilNadu"
+                            value={namingMeta.state || ""}
+                            onChange={(e) => setNamingMeta({ ...namingMeta, state: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">District *</label>
+                          <input
+                            className="input-field text-sm py-2"
+                            placeholder="e.g. Palakkad, Coimbatore"
+                            value={namingMeta.district || ""}
+                            onChange={(e) => setNamingMeta({ ...namingMeta, district: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Date (DDMMYYYY)</label>
+                          <input
+                            className="input-field text-sm py-2"
+                            placeholder="e.g. 24022026"
+                            maxLength={8}
+                            value={namingMeta.date || ""}
+                            onChange={(e) => setNamingMeta({ ...namingMeta, date: e.target.value })}
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Observed Condition *</label>
+                          <select
+                            className="select-field text-sm py-2"
+                            value={namingMeta.observedCondition || ""}
+                            onChange={(e) => setNamingMeta({ ...namingMeta, observedCondition: e.target.value })}
+                          >
+                            <option value="">Select</option>
+                            <option value="healthyPlant">Healthy Plant</option>
+                            <option value="diseasedPlant">Diseased Plant</option>
+                            <option value="pestAffected">Pest Affected</option>
+                            <option value="leafDamage">Leaf Damage</option>
+                            <option value="fruitRot">Fruit Rot</option>
+                            <option value="wiltSymptom">Wilt Symptom</option>
+                            <option value="nutrientDeficiency">Nutrient Deficiency</option>
+                            <option value="normalGrowth">Normal Growth</option>
+                          </select>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Client / Brand *</label>
+                          <input
+                            className="input-field text-sm py-2"
+                            placeholder="e.g. Reliance"
+                            value={namingMeta.client || ""}
+                            onChange={(e) => setNamingMeta({ ...namingMeta, client: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Store ID *</label>
+                          <input
+                            className="input-field text-sm py-2"
+                            placeholder="e.g. STR1023"
+                            value={namingMeta.storeId || ""}
+                            onChange={(e) => setNamingMeta({ ...namingMeta, storeId: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Product Category *</label>
+                          <input
+                            className="input-field text-sm py-2"
+                            placeholder="e.g. Beverages"
+                            value={namingMeta.category || ""}
+                            onChange={(e) => setNamingMeta({ ...namingMeta, category: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Product / SKU *</label>
+                          <input
+                            className="input-field text-sm py-2"
+                            placeholder="e.g. CocaCola_330ml"
+                            value={namingMeta.product || ""}
+                            onChange={(e) => setNamingMeta({ ...namingMeta, product: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Shelf *</label>
+                          <input
+                            className="input-field text-sm py-2"
+                            placeholder="e.g. Shelf2"
+                            value={namingMeta.shelf || ""}
+                            onChange={(e) => setNamingMeta({ ...namingMeta, shelf: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Capture Angle *</label>
+                          <select
+                            className="select-field text-sm py-2"
+                            value={namingMeta.angle || ""}
+                            onChange={(e) => setNamingMeta({ ...namingMeta, angle: e.target.value })}
+                          >
+                            <option value="">Select</option>
+                            <option value="Front">Front</option>
+                            <option value="Left">Left</option>
+                            <option value="Right">Right</option>
+                            <option value="Top">Top</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Date (YYYYMMDD)</label>
+                          <input
+                            className="input-field text-sm py-2"
+                            placeholder={new Date().toISOString().slice(0, 10).replace(/-/g, "")}
+                            maxLength={8}
+                            value={namingMeta.date || ""}
+                            onChange={(e) => setNamingMeta({ ...namingMeta, date: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Legacy Preview */}
+                    <div className="mt-3 bg-white border border-gray-200 rounded p-3">
+                      <p className="text-xs font-medium text-gray-500 mb-1">Preview (first image):</p>
+                      <code className="text-sm text-primary-700">
+                        {isMob
+                          ? `MOB_${(namingMeta.city || "___").substring(0, 3)}_${namingMeta.camera || "__"}_${namingMeta.date || "YYYYMMDD"}_F001.jpg`
+                          : isAgri
+                            ? `${namingMeta.cropName || "CropName"}_${namingMeta.state || "State"}_${namingMeta.district || "District"}_${namingMeta.date || "DDMMYYYY"}_${namingMeta.observedCondition || "Condition"}.jpg`
+                            : `${namingMeta.client || "Client"}_${namingMeta.storeId || "STR0000"}_${namingMeta.category || "Category"}_${namingMeta.product || "Product"}_${namingMeta.shelf || "Shelf1"}_${namingMeta.angle || "Front"}_${namingMeta.date || "YYYYMMDD"}_01.jpg`}
+                      </code>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

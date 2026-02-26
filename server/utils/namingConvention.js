@@ -13,8 +13,17 @@ const MOBILITY_PATTERN = /^MOB_[A-Z]{3}_[A-Z]{2,3}_\d{8}_F\d{3,4}\.(jpg|jpeg|png
 // Example: Reliance_STR1023_Beverages_CocaCola_330ml_Shelf2_Front_20260205_01.jpg
 const RETAIL_PATTERN = /^[A-Za-z0-9-]+_[A-Z]{3}\d+_[A-Za-z]+_[A-Za-z0-9-]+_Shelf\d+_[A-Za-z]+_\d{8}_\d{2,3}\.(jpg|jpeg|png)$/i;
 
+// Agri Sector Naming Convention
+// Format: CropName_State_District_Date_ObservedCondition.jpg
+// Example: Chilli_Kerala_Palakkad_24022026_healthyPlant.jpg
+const AGRI_PATTERN = /^[A-Za-z]+_[A-Za-z]+_[A-Za-z]+_\d{8}_[A-Za-z]+\.(jpg|jpeg|png)$/i;
+
 const CAMERA_POSITIONS = ['FC', 'RC', 'LC', 'RIC'];
 const CAPTURE_ANGLES = ['Front', 'Left', 'Right', 'Top'];
+const OBSERVED_CONDITIONS = [
+  'healthyPlant', 'diseasedPlant', 'pestAffected', 'leafDamage',
+  'fruitRot', 'wiltSymptom', 'nutrientDeficiency', 'normalGrowth'
+];
 
 /**
  * Validate Mobility sector image filename
@@ -178,7 +187,7 @@ function validateRetailNaming(filename) {
 /**
  * Main validator function
  * @param {string} filename 
- * @param {string} mainCategory - 'Mobility' or 'Retail'
+ * @param {string} mainCategory - 'Mobility', 'Retail', or 'Agri'
  * @returns {Object} validation result
  */
 function validateImageNaming(filename, mainCategory) {
@@ -194,13 +203,77 @@ function validateImageNaming(filename, mainCategory) {
     return validateMobilityNaming(filename);
   } else if (mainCategory === 'Retail') {
     return validateRetailNaming(filename);
+  } else if (mainCategory === 'Agri') {
+    return validateAgriNaming(filename);
   } else {
+    // For dynamically created categories, do basic validation
     return {
-      isValid: false,
-      errors: [`Unknown category: ${mainCategory}. Must be 'Mobility' or 'Retail'`],
-      metadata: {}
+      isValid: true,
+      errors: [],
+      metadata: { rawName: filename }
     };
   }
+}
+
+/**
+ * Validate Agri sector image filename
+ * @param {string} filename 
+ * @returns {Object} { isValid: boolean, errors: string[], metadata: Object }
+ */
+function validateAgriNaming(filename) {
+  const errors = [];
+  const metadata = {};
+
+  if (!AGRI_PATTERN.test(filename)) {
+    const parts = filename.replace(/\.(jpg|jpeg|png)$/i, '').split('_');
+
+    if (parts.length < 5) {
+      errors.push('Invalid format. Expected: CropName_State_District_Date_ObservedCondition.jpg');
+      return { isValid: false, errors, metadata };
+    }
+
+    if (!parts[0] || parts[0].length < 2) {
+      errors.push('Crop name is required (min 2 chars)');
+    } else {
+      metadata.cropName = parts[0];
+    }
+
+    if (!parts[1] || parts[1].length < 2) {
+      errors.push('State is required');
+    } else {
+      metadata.state = parts[1];
+    }
+
+    if (!parts[2] || parts[2].length < 2) {
+      errors.push('District is required');
+    } else {
+      metadata.district = parts[2];
+    }
+
+    if (parts[3] && !/^\d{8}$/.test(parts[3])) {
+      errors.push(`Date must be DDMMYYYY format, found '${parts[3]}'`);
+    } else {
+      metadata.date = parts[3];
+    }
+
+    if (!parts[4]) {
+      errors.push('Observed condition is required');
+    } else {
+      metadata.observedCondition = parts[4].split('.')[0];
+    }
+
+    return { isValid: errors.length === 0, errors, metadata };
+  }
+
+  const namePart = filename.replace(/\.(jpg|jpeg|png)$/i, '');
+  const parts = namePart.split('_');
+  metadata.cropName = parts[0];
+  metadata.state = parts[1];
+  metadata.district = parts[2];
+  metadata.date = parts[3];
+  metadata.observedCondition = parts[4];
+
+  return { isValid: true, errors: [], metadata };
 }
 
 /**
@@ -236,6 +309,18 @@ function getNamingConventionHelp(mainCategory) {
         { name: 'Date', value: '20260205', description: 'Date in YYYYMMDD format' },
         { name: 'Sequence', value: '01', description: 'Sequence number 01-99' }
       ]
+    },
+    'Agri': {
+      format: 'CropName_State_District_Date_ObservedCondition.jpg',
+      example: 'Chilli_Kerala_Palakkad_24022026_healthyPlant.jpg',
+      description: 'Agriculture sector – crop and field monitoring images',
+      fields: [
+        { name: 'CropName', value: 'Chilli', description: 'Name of the crop (e.g., Chilli, Rice, Cotton)' },
+        { name: 'State', value: 'Kerala', description: 'State name' },
+        { name: 'District', value: 'Palakkad', description: 'District name' },
+        { name: 'Date', value: '24022026', description: 'Date in DDMMYYYY format' },
+        { name: 'ObservedCondition', value: 'healthyPlant', description: `Condition: ${OBSERVED_CONDITIONS.join(', ')}` }
+      ]
     }
   };
 
@@ -246,7 +331,9 @@ module.exports = {
   validateImageNaming,
   validateMobilityNaming,
   validateRetailNaming,
+  validateAgriNaming,
   getNamingConventionHelp,
   CAMERA_POSITIONS,
-  CAPTURE_ANGLES
+  CAPTURE_ANGLES,
+  OBSERVED_CONDITIONS
 };
