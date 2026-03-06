@@ -228,13 +228,16 @@ router.post("/upload", auth("student"), upload.array("images", 50), (req, res) =
             }
 
             db.query(
-              `UPDATE tasks
-               SET uploaded_count = uploaded_count + ?,
-                   status = IF(approved_count >= total_images, 'completed', 'in_progress')
-               WHERE id = ?`,
-              [req.files.length, task_id],
+              `UPDATE tasks t
+               SET t.status = IF(
+                 (SELECT COUNT(*) FROM images WHERE task_id = t.id AND status = 'approved') >= t.total_images,
+                 'completed',
+                 IF(t.status = 'open', 'in_progress', t.status)
+               )
+               WHERE t.id = ?`,
+              [task_id],
               (err4) => {
-                if (err4) console.error("TASK COUNT UPDATE ERROR:", err4);
+                if (err4) console.error("TASK STATUS UPDATE ERROR:", err4);
 
                 res.json({
                   message: `${req.files.length} image(s) uploaded and renamed successfully`,

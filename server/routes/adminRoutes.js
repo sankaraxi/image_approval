@@ -123,18 +123,20 @@ router.post("/approve-image/:imageId", verifyAdmin, async (req, res) => {
       }
     }
 
-    // Increment task approved_count and possibly complete task (best-effort)
+    // Update task status if all images are approved (best-effort)
     try {
       await db.promise().query(
         `UPDATE tasks t
-         JOIN images i ON i.task_id = t.id
-         SET t.approved_count = t.approved_count + 1,
-             t.status = IF(t.approved_count + 1 >= t.total_images, 'completed', t.status)
-         WHERE i.id = ?`,
+         SET t.status = IF(
+           (SELECT COUNT(*) FROM images WHERE task_id = t.id AND status = 'approved') >= t.total_images,
+           'completed',
+           IF(t.status = 'open', 'in_progress', t.status)
+         )
+         WHERE t.id = (SELECT task_id FROM images WHERE id = ?)`,
         [imageId]
       );
     } catch (taskErr) {
-      console.warn("Failed to update task counts for imageId", imageId, taskErr);
+      console.warn("Failed to update task status for imageId", imageId, taskErr);
     }
 
     res.json({ message: "Image approved and uploaded to vendor" });
@@ -200,13 +202,15 @@ router.put("/approve/:id", verifyAdmin, (req, res) => {
     (err) => {
       if (err) return res.status(500).json({ error: "Approve failed" });
 
-      // Increment task approved_count and check if task is complete
+      // Update task status based on dynamically calculated approved count
       db.query(
         `UPDATE tasks t
-         JOIN images i ON i.task_id = t.id
-         SET t.approved_count = t.approved_count + 1,
-             t.status = IF(t.approved_count + 1 >= t.total_images, 'completed', t.status)
-         WHERE i.id = ?`,
+         SET t.status = IF(
+           (SELECT COUNT(*) FROM images WHERE task_id = t.id AND status = 'approved') >= t.total_images,
+           'completed',
+           IF(t.status = 'open', 'in_progress', t.status)
+         )
+         WHERE t.id = (SELECT task_id FROM images WHERE id = ?)`,
         [req.params.id]
       );
 
@@ -232,14 +236,7 @@ router.put("/reject/:id", verifyAdmin, (req, res) => {
     (err) => {
       if (err) return res.status(500).json({ error: "Reject failed" });
 
-      db.query(
-        `UPDATE tasks t
-         JOIN images i ON i.task_id = t.id
-         SET t.rejected_count = t.rejected_count + 1
-         WHERE i.id = ?`,
-        [req.params.id]
-      );
-
+      // No need to update task counts - they're calculated dynamically
       res.json({ message: "Image rejected" });
     }
   );

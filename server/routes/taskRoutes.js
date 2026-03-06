@@ -181,7 +181,10 @@ router.get("/", auth(), (req, res) => {
       t.*,
       c.name AS category_name,
       c.naming_prefix,
-      u.username AS created_by_name
+      u.username AS created_by_name,
+      (SELECT COUNT(*) FROM images WHERE task_id = t.id) AS uploaded_count,
+      (SELECT COUNT(*) FROM images WHERE task_id = t.id AND status = 'approved') AS approved_count,
+      (SELECT COUNT(*) FROM images WHERE task_id = t.id AND status = 'rejected') AS rejected_count
     FROM tasks t
     JOIN categories c ON t.main_category_id = c.id
     JOIN users u ON t.created_by = u.id
@@ -203,7 +206,10 @@ router.get("/", auth(), (req, res) => {
    ========================================================= */
 router.get("/:id", auth(), (req, res) => {
   const taskSql = `
-    SELECT t.*, c.name AS category_name, c.naming_prefix
+    SELECT t.*, c.name AS category_name, c.naming_prefix,
+      (SELECT COUNT(*) FROM images WHERE task_id = t.id) AS uploaded_count,
+      (SELECT COUNT(*) FROM images WHERE task_id = t.id AND status = 'approved') AS approved_count,
+      (SELECT COUNT(*) FROM images WHERE task_id = t.id AND status = 'rejected') AS rejected_count
     FROM tasks t
     JOIN categories c ON t.main_category_id = c.id
     WHERE t.id = ?
