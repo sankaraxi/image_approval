@@ -36,7 +36,7 @@ CREATE TABLE `categories` (
   KEY `idx_parent` (`parent_id`),
   KEY `idx_level` (`level`),
   CONSTRAINT `categories_ibfk_1` FOREIGN KEY (`parent_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=68 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=99 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -45,7 +45,7 @@ CREATE TABLE `categories` (
 
 LOCK TABLES `categories` WRITE;
 /*!40000 ALTER TABLE `categories` DISABLE KEYS */;
-INSERT INTO `categories` VALUES (1,'Mobility',1,NULL,NULL,'MOB',1,1,'2026-02-06 07:34:37'),(2,'Road Type',2,1,NULL,NULL,1,1,'2026-02-06 07:34:37'),(3,'Traffic Density',2,1,NULL,NULL,1,2,'2026-02-06 07:34:37'),(4,'Time',2,1,NULL,NULL,1,3,'2026-02-06 07:34:37'),(5,'Weather',2,1,NULL,NULL,1,4,'2026-02-06 07:34:37'),(6,'Motion',2,1,NULL,NULL,1,5,'2026-02-06 07:34:37'),(7,'Urban',3,2,NULL,NULL,1,1,'2026-02-06 07:34:37'),(8,'Semi-urban',3,2,NULL,NULL,1,2,'2026-02-06 07:34:37'),(9,'Rural',3,2,NULL,NULL,1,3,'2026-02-06 07:34:37'),(10,'Highway',3,2,NULL,NULL,1,4,'2026-02-06 07:34:37'),(11,'Bypass',3,2,NULL,NULL,1,5,'2026-02-06 07:34:37'),(12,'Industrial',3,2,NULL,NULL,1,6,'2026-02-06 07:34:37'),(13,'Gated communities',3,2,NULL,NULL,1,7,'2026-02-06 07:34:37'),(14,'Low',3,3,NULL,NULL,1,1,'2026-02-06 07:34:37'),(15,'Medium',3,3,NULL,NULL,1,2,'2026-02-06 07:34:37'),(16,'High',3,3,NULL,NULL,1,3,'2026-02-06 07:34:37'),(17,'Extreme',3,3,NULL,NULL,1,4,'2026-02-06 07:34:37'),(18,'Day',3,4,NULL,NULL,1,1,'2026-02-06 07:34:37'),(19,'Evening',3,4,NULL,NULL,1,2,'2026-02-06 07:34:37'),(20,'Night',3,4,NULL,NULL,1,3,'2026-02-06 07:34:37'),(21,'Dusk',3,4,NULL,NULL,1,4,'2026-02-06 07:34:37'),(22,'Dawn',3,4,NULL,NULL,1,5,'2026-02-06 07:34:37'),(23,'Sunny',3,5,NULL,NULL,1,1,'2026-02-06 07:34:37'),(24,'Rain',3,5,NULL,NULL,1,2,'2026-02-06 07:34:37'),(25,'Fog/Smog',3,5,NULL,NULL,1,3,'2026-02-06 07:34:37'),(26,'Post-rain wet reflective',3,5,NULL,NULL,1,4,'2026-02-06 07:34:37'),(27,'Monsoon splash',3,5,NULL,NULL,1,5,'2026-02-06 07:34:37'),(28,'Static capture (map)',3,6,NULL,NULL,1,1,'2026-02-06 07:34:37'),(29,'On-vehicle capture (AV)',3,6,NULL,NULL,1,2,'2026-02-06 07:34:37'),(30,'Drone capture (behavior analysis)',3,6,NULL,NULL,1,3,'2026-02-06 07:34:37'),(31,'Retail',1,NULL,NULL,'RET',1,2,'2026-02-06 07:34:37'),(32,'Store Type',2,31,NULL,NULL,1,1,'2026-02-06 07:34:37'),(33,'Product Category',2,31,NULL,NULL,1,2,'2026-02-06 07:34:37'),(34,'Shelf Position',2,31,NULL,NULL,1,3,'2026-02-06 07:34:37'),(35,'Capture Angle',2,31,NULL,NULL,1,4,'2026-02-06 07:34:37'),(36,'Store Condition',2,31,NULL,NULL,1,5,'2026-02-06 07:34:37'),(37,'Supermarket',3,32,NULL,NULL,1,1,'2026-02-06 07:34:37'),(38,'Hypermarket',3,32,NULL,NULL,1,2,'2026-02-06 07:34:37'),(39,'Convenience Store',3,32,NULL,NULL,1,3,'2026-02-06 07:34:37'),(40,'Department Store',3,32,NULL,NULL,1,4,'2026-02-06 07:34:37'),(41,'Specialty Store',3,32,NULL,NULL,1,5,'2026-02-06 07:34:37'),(42,'Kirana Store',3,32,NULL,NULL,1,6,'2026-02-06 07:34:37'),(43,'Beverages',3,33,NULL,NULL,1,1,'2026-02-06 07:34:37'),(44,'Snacks',3,33,NULL,NULL,1,2,'2026-02-06 07:34:37'),(45,'Dairy',3,33,NULL,NULL,1,3,'2026-02-06 07:34:37'),(46,'Personal Care',3,33,NULL,NULL,1,4,'2026-02-06 07:34:37'),(47,'Household',3,33,NULL,NULL,1,5,'2026-02-06 07:34:37'),(48,'Frozen Foods',3,33,NULL,NULL,1,6,'2026-02-06 07:34:37'),(49,'Fresh Produce',3,33,NULL,NULL,1,7,'2026-02-06 07:34:37'),(50,'Bakery',3,33,NULL,NULL,1,8,'2026-02-06 07:34:37'),(51,'Top Shelf',3,34,NULL,NULL,1,1,'2026-02-06 07:34:37'),(52,'Eye Level',3,34,NULL,NULL,1,2,'2026-02-06 07:34:37'),(53,'Mid Level',3,34,NULL,NULL,1,3,'2026-02-06 07:34:37'),(54,'Bottom Shelf',3,34,NULL,NULL,1,4,'2026-02-06 07:34:37'),(55,'End Cap',3,34,NULL,NULL,1,5,'2026-02-06 07:34:37'),(56,'Counter Display',3,34,NULL,NULL,1,6,'2026-02-06 07:34:37'),(57,'Front View',3,35,NULL,NULL,1,1,'2026-02-06 07:34:37'),(58,'Left Side',3,35,NULL,NULL,1,2,'2026-02-06 07:34:37'),(59,'Right Side',3,35,NULL,NULL,1,3,'2026-02-06 07:34:37'),(60,'Top View',3,35,NULL,NULL,1,4,'2026-02-06 07:34:37'),(61,'Wide Angle',3,35,NULL,NULL,1,5,'2026-02-06 07:34:37'),(62,'Close-up',3,35,NULL,NULL,1,6,'2026-02-06 07:34:37'),(63,'Well Stocked',3,36,NULL,NULL,1,1,'2026-02-06 07:34:37'),(64,'Partially Stocked',3,36,NULL,NULL,1,2,'2026-02-06 07:34:37'),(65,'Empty Shelves',3,36,NULL,NULL,1,3,'2026-02-06 07:34:37'),(66,'Promotional Display',3,36,NULL,NULL,1,4,'2026-02-06 07:34:37'),(67,'Regular Layout',3,36,NULL,NULL,1,5,'2026-02-06 07:34:37');
+INSERT INTO `categories` VALUES (1,'Mobility',1,NULL,NULL,'MOB',1,1,'2026-02-06 07:34:37'),(2,'Road Type',2,1,NULL,NULL,1,1,'2026-02-06 07:34:37'),(3,'Traffic Density',2,1,NULL,NULL,1,2,'2026-02-06 07:34:37'),(4,'Time',2,1,NULL,NULL,1,3,'2026-02-06 07:34:37'),(5,'Weather',2,1,NULL,NULL,1,4,'2026-02-06 07:34:37'),(6,'Motion',2,1,NULL,NULL,1,5,'2026-02-06 07:34:37'),(7,'Urban',3,2,NULL,NULL,1,1,'2026-02-06 07:34:37'),(8,'Semi-urban',3,2,NULL,NULL,1,2,'2026-02-06 07:34:37'),(9,'Rural',3,2,NULL,NULL,1,3,'2026-02-06 07:34:37'),(10,'Highway',3,2,NULL,NULL,1,4,'2026-02-06 07:34:37'),(11,'Bypass',3,2,NULL,NULL,1,5,'2026-02-06 07:34:37'),(12,'Industrial',3,2,NULL,NULL,1,6,'2026-02-06 07:34:37'),(13,'Gated communities',3,2,NULL,NULL,1,7,'2026-02-06 07:34:37'),(14,'Low',3,3,NULL,NULL,1,1,'2026-02-06 07:34:37'),(15,'Medium',3,3,NULL,NULL,1,2,'2026-02-06 07:34:37'),(16,'High',3,3,NULL,NULL,1,3,'2026-02-06 07:34:37'),(17,'Extreme',3,3,NULL,NULL,1,4,'2026-02-06 07:34:37'),(18,'Day',3,4,NULL,NULL,1,1,'2026-02-06 07:34:37'),(19,'Evening',3,4,NULL,NULL,1,2,'2026-02-06 07:34:37'),(20,'Night',3,4,NULL,NULL,1,3,'2026-02-06 07:34:37'),(21,'Dusk',3,4,NULL,NULL,1,4,'2026-02-06 07:34:37'),(22,'Dawn',3,4,NULL,NULL,1,5,'2026-02-06 07:34:37'),(23,'Sunny',3,5,NULL,NULL,1,1,'2026-02-06 07:34:37'),(24,'Rain',3,5,NULL,NULL,1,2,'2026-02-06 07:34:37'),(25,'Fog/Smog',3,5,NULL,NULL,1,3,'2026-02-06 07:34:37'),(26,'Post-rain wet reflective',3,5,NULL,NULL,1,4,'2026-02-06 07:34:37'),(27,'Monsoon splash',3,5,NULL,NULL,1,5,'2026-02-06 07:34:37'),(28,'Static capture (map)',3,6,NULL,NULL,1,1,'2026-02-06 07:34:37'),(29,'On-vehicle capture (AV)',3,6,NULL,NULL,1,2,'2026-02-06 07:34:37'),(30,'Drone capture (behavior analysis)',3,6,NULL,NULL,1,3,'2026-02-06 07:34:37'),(31,'Retail',1,NULL,NULL,'RET',1,2,'2026-02-06 07:34:37'),(32,'Store Type',2,31,NULL,NULL,1,1,'2026-02-06 07:34:37'),(33,'Product Category',2,31,NULL,NULL,1,2,'2026-02-06 07:34:37'),(34,'Shelf Position',2,31,NULL,NULL,1,3,'2026-02-06 07:34:37'),(35,'Capture Angle',2,31,NULL,NULL,1,4,'2026-02-06 07:34:37'),(36,'Store Condition',2,31,NULL,NULL,1,5,'2026-02-06 07:34:37'),(37,'Supermarket',3,32,NULL,NULL,1,1,'2026-02-06 07:34:37'),(38,'Hypermarket',3,32,NULL,NULL,1,2,'2026-02-06 07:34:37'),(39,'Convenience Store',3,32,NULL,NULL,1,3,'2026-02-06 07:34:37'),(40,'Department Store',3,32,NULL,NULL,1,4,'2026-02-06 07:34:37'),(41,'Specialty Store',3,32,NULL,NULL,1,5,'2026-02-06 07:34:37'),(42,'Kirana Store',3,32,NULL,NULL,1,6,'2026-02-06 07:34:37'),(43,'Beverages',3,33,NULL,NULL,1,1,'2026-02-06 07:34:37'),(44,'Snacks',3,33,NULL,NULL,1,2,'2026-02-06 07:34:37'),(45,'Dairy',3,33,NULL,NULL,1,3,'2026-02-06 07:34:37'),(46,'Personal Care',3,33,NULL,NULL,1,4,'2026-02-06 07:34:37'),(47,'Household',3,33,NULL,NULL,1,5,'2026-02-06 07:34:37'),(48,'Frozen Foods',3,33,NULL,NULL,1,6,'2026-02-06 07:34:37'),(49,'Fresh Produce',3,33,NULL,NULL,1,7,'2026-02-06 07:34:37'),(50,'Bakery',3,33,NULL,NULL,1,8,'2026-02-06 07:34:37'),(51,'Top Shelf',3,34,NULL,NULL,1,1,'2026-02-06 07:34:37'),(52,'Eye Level',3,34,NULL,NULL,1,2,'2026-02-06 07:34:37'),(53,'Mid Level',3,34,NULL,NULL,1,3,'2026-02-06 07:34:37'),(54,'Bottom Shelf',3,34,NULL,NULL,1,4,'2026-02-06 07:34:37'),(55,'End Cap',3,34,NULL,NULL,1,5,'2026-02-06 07:34:37'),(56,'Counter Display',3,34,NULL,NULL,1,6,'2026-02-06 07:34:37'),(57,'Front View',3,35,NULL,NULL,1,1,'2026-02-06 07:34:37'),(58,'Left Side',3,35,NULL,NULL,1,2,'2026-02-06 07:34:37'),(59,'Right Side',3,35,NULL,NULL,1,3,'2026-02-06 07:34:37'),(60,'Top View',3,35,NULL,NULL,1,4,'2026-02-06 07:34:37'),(61,'Wide Angle',3,35,NULL,NULL,1,5,'2026-02-06 07:34:37'),(62,'Close-up',3,35,NULL,NULL,1,6,'2026-02-06 07:34:37'),(63,'Well Stocked',3,36,NULL,NULL,1,1,'2026-02-06 07:34:37'),(64,'Partially Stocked',3,36,NULL,NULL,1,2,'2026-02-06 07:34:37'),(65,'Empty Shelves',3,36,NULL,NULL,1,3,'2026-02-06 07:34:37'),(66,'Promotional Display',3,36,NULL,NULL,1,4,'2026-02-06 07:34:37'),(67,'Regular Layout',3,36,NULL,NULL,1,5,'2026-02-06 07:34:37'),(68,'Agri',1,NULL,'Agriculture sector – crop monitoring and field images','AGRI',1,3,'2026-02-26 05:48:35'),(69,'Crop Type',2,68,NULL,NULL,1,1,'2026-02-26 05:48:35'),(70,'Plant View',2,68,NULL,NULL,1,2,'2026-02-26 05:48:35'),(71,'Time',2,68,NULL,NULL,1,3,'2026-02-26 05:48:35'),(72,'Weather',2,68,NULL,NULL,1,4,'2026-02-26 05:48:35'),(73,'Capture Type',2,68,NULL,NULL,1,5,'2026-02-26 05:48:35'),(74,'Healthy Plant',3,69,NULL,NULL,1,1,'2026-02-26 05:48:35'),(75,'Diseased Plant',3,69,NULL,NULL,1,2,'2026-02-26 05:48:35'),(76,'Pest-Affected Plant',3,69,NULL,NULL,1,3,'2026-02-26 05:48:35'),(77,'Whole Plant',3,70,NULL,NULL,1,1,'2026-02-26 05:48:35'),(78,'Leaf Close-Up',3,70,NULL,NULL,1,2,'2026-02-26 05:48:35'),(79,'Field-Level View',3,70,NULL,NULL,1,3,'2026-02-26 05:48:35'),(80,'Day',3,71,NULL,NULL,1,1,'2026-02-26 05:48:35'),(81,'Evening',3,71,NULL,NULL,1,2,'2026-02-26 05:48:35'),(82,'Night',3,71,NULL,NULL,1,3,'2026-02-26 05:48:35'),(83,'Dusk',3,71,NULL,NULL,1,4,'2026-02-26 05:48:35'),(84,'Dawn',3,71,NULL,NULL,1,5,'2026-02-26 05:48:35'),(85,'Rainy',3,72,NULL,NULL,1,1,'2026-02-26 05:48:35'),(86,'Sunny',3,72,NULL,NULL,1,2,'2026-02-26 05:48:35'),(87,'Fog/Smog',3,72,NULL,NULL,1,3,'2026-02-26 05:48:35'),(88,'Post-Rain Wet Field',3,72,NULL,NULL,1,4,'2026-02-26 05:48:35'),(89,'Morning Dew / Leaf Wetness',3,72,NULL,NULL,1,5,'2026-02-26 05:48:35'),(90,'Cold / Frost Risk',3,72,NULL,NULL,1,6,'2026-02-26 05:48:35'),(91,'Partial Cloudy',3,72,NULL,NULL,1,7,'2026-02-26 05:48:35'),(92,'Continuous Rain (Monsoon)',3,72,NULL,NULL,1,8,'2026-02-26 05:48:35'),(93,'Field Walk Capture (Farmer Scouting)',3,73,NULL,NULL,1,1,'2026-02-26 05:48:35'),(94,'Manual Plant Inspection',3,73,NULL,NULL,1,2,'2026-02-26 05:48:35'),(95,'Close Observation Capture (Leaf/Pest)',3,73,NULL,NULL,1,3,'2026-02-26 05:48:35'),(96,'On-Vehicle Field Survey',3,73,NULL,NULL,1,4,'2026-02-26 05:48:35'),(97,'Drone Capture',3,73,NULL,NULL,1,5,'2026-02-26 05:48:35'),(98,'Fixed Camera Capture',3,73,NULL,NULL,1,6,'2026-02-26 05:48:35');
 /*!40000 ALTER TABLE `categories` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -86,7 +86,7 @@ CREATE TABLE `images` (
   CONSTRAINT `images_ibfk_3` FOREIGN KEY (`main_category_id`) REFERENCES `categories` (`id`),
   CONSTRAINT `images_ibfk_4` FOREIGN KEY (`approved_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `images_ibfk_5` FOREIGN KEY (`rejected_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -95,8 +95,43 @@ CREATE TABLE `images` (
 
 LOCK TABLES `images` WRITE;
 /*!40000 ALTER TABLE `images` DISABLE KEYS */;
-INSERT INTO `images` VALUES (1,1,2,'MOB_BLR_RC_20260202_F001.jpg','city-1030x685.jpg','MOB_BLR_RC_20260202_F001.jpg',35718,'image/jpeg',1,'{\"city\": \"BLR\", \"date\": \"20260202\", \"index\": 1, \"camera\": \"RC\", \"generatedName\": \"MOB_BLR_RC_20260202_F001.jpg\", \"studentSubSelections\": {}}','pending',NULL,NULL,NULL,'2026-02-06 07:37:03',NULL,NULL),(2,1,2,'MOB_BLR_RC_20260202_F002.jpg','images.jpg','MOB_BLR_RC_20260202_F002.jpg',12972,'image/jpeg',1,'{\"city\": \"BLR\", \"date\": \"20260202\", \"index\": 2, \"camera\": \"RC\", \"generatedName\": \"MOB_BLR_RC_20260202_F002.jpg\", \"studentSubSelections\": {}}','approved',1,NULL,NULL,'2026-02-06 07:37:03','2026-02-06 07:42:18',NULL);
+INSERT INTO `images` VALUES (1,1,2,'MOB_BLR_RC_20260202_F001.jpg','city-1030x685.jpg','MOB_BLR_RC_20260202_F001.jpg',35718,'image/jpeg',1,'{\"city\": \"BLR\", \"date\": \"20260202\", \"index\": 1, \"camera\": \"RC\", \"generatedName\": \"MOB_BLR_RC_20260202_F001.jpg\", \"studentSubSelections\": {}}','pending',NULL,NULL,NULL,'2026-02-06 07:37:03',NULL,NULL),(2,1,2,'MOB_BLR_RC_20260202_F002.jpg','images.jpg','MOB_BLR_RC_20260202_F002.jpg',12972,'image/jpeg',1,'{\"city\": \"BLR\", \"date\": \"20260202\", \"index\": 2, \"camera\": \"RC\", \"generatedName\": \"MOB_BLR_RC_20260202_F002.jpg\", \"studentSubSelections\": {}}','approved',1,NULL,NULL,'2026-02-06 07:37:03','2026-02-06 07:42:18',NULL),(5,4,7,'MOB_BLR_FC_20260224_F001.jpeg','Creative Branding.jpg.jpeg','MOB_BLR_FC_20260224_F001.jpeg',6403299,'image/jpeg',1,'{\"city\": \"BLR\", \"date\": \"20260224\", \"index\": 1, \"camera\": \"FC\", \"generatedName\": \"MOB_BLR_FC_20260224_F001.jpeg\", \"studentSubSelections\": {\"2\": \"7\", \"3\": \"14\", \"4\": \"18\", \"5\": \"25\"}}','approved',8,NULL,NULL,'2026-02-24 10:01:14','2026-02-24 10:11:27',NULL),(6,7,7,'Chilli_Tamil_Coim_24022026_healthyPlant.jpg','lip-balm-non-tinted-2.jpg','Chilli_Tamil_Coim_24022026_healthyPlant.jpg',694316,'image/jpeg',68,'{\"date\": \"24022026\", \"index\": 1, \"state\": \"Tamil\", \"cropName\": \"Chilli\", \"district\": \"Coim\", \"generatedName\": \"Chilli_Tamil_Coim_24022026_healthyPlant.jpg\", \"observedCondition\": \"healthyPlant\", \"studentSubSelections\": {\"69\": \"74\", \"70\": \"77\", \"71\": \"80\", \"72\": \"92\", \"73\": \"93\"}}','pending',NULL,NULL,NULL,'2026-02-26 06:02:32',NULL,NULL);
 /*!40000 ALTER TABLE `images` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `naming_convention_fields`
+--
+
+DROP TABLE IF EXISTS `naming_convention_fields`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `naming_convention_fields` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `category_id` int NOT NULL COMMENT 'Main category (level 1)',
+  `field_name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'Internal key e.g. cropName, location',
+  `field_label` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'Display label e.g. Crop Name',
+  `field_type` enum('text','select','date') COLLATE utf8mb4_unicode_ci DEFAULT 'text',
+  `field_options` json DEFAULT NULL COMMENT 'For select: ["Option1","Option2"]',
+  `is_required` tinyint(1) DEFAULT '1',
+  `display_order` int DEFAULT '0',
+  `placeholder` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `separator` varchar(5) COLLATE utf8mb4_unicode_ci DEFAULT '_' COMMENT 'Separator after this field in filename',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_category` (`category_id`),
+  CONSTRAINT `ncf_category_fk` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `naming_convention_fields`
+--
+
+LOCK TABLES `naming_convention_fields` WRITE;
+/*!40000 ALTER TABLE `naming_convention_fields` DISABLE KEYS */;
+INSERT INTO `naming_convention_fields` VALUES (1,68,'cropName','Crop Name','text',NULL,1,1,'e.g. Chilli, Rice, Cotton','_','2026-02-26 05:48:35'),(2,68,'state','State','text',NULL,1,2,'e.g. Kerala, TamilNadu','_','2026-02-26 05:48:35'),(3,68,'district','District','text',NULL,1,3,'e.g. Palakkad, Coimbatore','_','2026-02-26 05:48:35'),(4,68,'date','Date (DDMMYYYY)','date',NULL,1,4,'e.g. 24022026','_','2026-02-26 05:48:35'),(5,68,'observedCondition','Observed Condition','select','[\"healthyPlant\", \"diseasedPlant\", \"pestAffected\", \"leafDamage\", \"fruitRot\", \"wiltSymptom\", \"nutrientDeficiency\", \"normalGrowth\"]',1,5,'Select condition','','2026-02-26 05:48:35');
+/*!40000 ALTER TABLE `naming_convention_fields` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -118,7 +153,7 @@ CREATE TABLE `task_subcategory_requirements` (
   CONSTRAINT `task_subcategory_requirements_ibfk_1` FOREIGN KEY (`task_id`) REFERENCES `tasks` (`id`) ON DELETE CASCADE,
   CONSTRAINT `task_subcategory_requirements_ibfk_2` FOREIGN KEY (`subcategory_id`) REFERENCES `categories` (`id`),
   CONSTRAINT `task_subcategory_requirements_ibfk_3` FOREIGN KEY (`subsub_category_id`) REFERENCES `categories` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=41 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=46 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -127,7 +162,7 @@ CREATE TABLE `task_subcategory_requirements` (
 
 LOCK TABLES `task_subcategory_requirements` WRITE;
 /*!40000 ALTER TABLE `task_subcategory_requirements` DISABLE KEYS */;
-INSERT INTO `task_subcategory_requirements` VALUES (1,1,2,7),(2,1,3,14),(3,1,4,18),(4,1,5,25),(5,1,6,28),(16,4,2,NULL),(17,4,3,NULL),(18,4,4,NULL),(19,4,5,NULL),(20,4,6,NULL),(26,6,2,7),(27,6,3,15),(28,6,4,19),(29,6,5,24),(30,6,6,28),(36,5,32,NULL),(37,5,33,NULL),(38,5,34,NULL),(39,5,35,NULL),(40,5,36,NULL);
+INSERT INTO `task_subcategory_requirements` VALUES (1,1,2,7),(2,1,3,14),(3,1,4,18),(4,1,5,25),(5,1,6,28),(16,4,2,NULL),(17,4,3,NULL),(18,4,4,NULL),(19,4,5,NULL),(20,4,6,NULL),(26,6,2,7),(27,6,3,15),(28,6,4,19),(29,6,5,24),(30,6,6,28),(36,5,32,NULL),(37,5,33,NULL),(38,5,34,NULL),(39,5,35,NULL),(40,5,36,NULL),(41,7,69,NULL),(42,7,70,NULL),(43,7,71,NULL),(44,7,72,NULL),(45,7,73,NULL);
 /*!40000 ALTER TABLE `task_subcategory_requirements` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -152,13 +187,16 @@ CREATE TABLE `tasks` (
   `created_by` int NOT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `start_date` date DEFAULT NULL,
+  `end_date` date DEFAULT NULL,
+  `final_review_date` date DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `main_category_id` (`main_category_id`),
   KEY `created_by` (`created_by`),
   KEY `idx_status` (`status`),
   CONSTRAINT `tasks_ibfk_1` FOREIGN KEY (`main_category_id`) REFERENCES `categories` (`id`),
   CONSTRAINT `tasks_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -167,7 +205,7 @@ CREATE TABLE `tasks` (
 
 LOCK TABLES `tasks` WRITE;
 /*!40000 ALTER TABLE `tasks` DISABLE KEYS */;
-INSERT INTO `tasks` VALUES (1,'Coimbatore Roads','Images for Coimbatore',1,100,2,1,0,1,'in_progress',1,'2026-02-06 07:34:47','2026-02-06 07:42:19'),(4,'test mail','test desc',1,100,0,0,0,0,'open',5,'2026-02-12 09:32:22','2026-02-12 09:32:22'),(5,'test mail iifrrdee5','test descri',31,1004,0,0,0,0,'open',5,'2026-02-12 09:33:28','2026-02-24 09:30:03'),(6,'test again for mail trigger','df',1,100,0,0,0,1,'open',5,'2026-02-12 10:32:00','2026-02-12 10:32:00');
+INSERT INTO `tasks` VALUES (1,'Coimbatore Roads','Images for Coimbatore',1,100,2,1,0,1,'in_progress',1,'2026-02-06 07:34:47','2026-02-06 07:42:19',NULL,NULL,NULL),(4,'test mail','test desc',1,100,1,1,0,0,'in_progress',5,'2026-02-12 09:32:22','2026-02-24 10:11:27',NULL,NULL,NULL),(5,'test mail iifrrdee5','test descri',31,1004,0,0,0,0,'open',5,'2026-02-12 09:33:28','2026-02-24 09:30:03',NULL,NULL,NULL),(6,'test again for mail trigger','df',1,100,0,0,0,1,'open',5,'2026-02-12 10:32:00','2026-02-12 10:32:00',NULL,NULL,NULL),(7,'agri','agri test',68,100,1,0,0,0,'in_progress',8,'2026-02-26 05:49:21','2026-02-26 06:02:32',NULL,NULL,NULL);
 /*!40000 ALTER TABLE `tasks` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -211,4 +249,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-02-24 15:10:38
+-- Dump completed on 2026-03-09 10:26:08
