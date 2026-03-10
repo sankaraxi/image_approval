@@ -38,7 +38,7 @@ const sendTaskCreationEmail = async (taskDetails) => {
             <p style="margin: 10px 0;"><strong>Created At:</strong> ${new Date().toLocaleString()}</p>
           </div>
           <p style="color: #7f8c8d; font-size: 12px; margin-top: 30px;">
-            This is an automated notification from the Image Scanner System.
+            This is an automated notification from the Genius Labs Image Accumulator System.
           </p>
         </div>
       `
@@ -66,7 +66,7 @@ const sendDailyReportEmail = async (stats) => {
       to: 'krishnapriya.p@kggeniuslabs.com',
       // to: 'sankar.k@kggeniuslabs.com',
       cc: 'info@kggeniuslabs.com',
-      subject: `Daily Report - Image Scanner Statistics (${new Date().toLocaleDateString()})`,
+      subject: `Daily Report - Genius Labs Image Accumulator Statistics (${new Date().toLocaleDateString()})`,
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px;">
           <h2 style="color: #2c3e50;">Daily Image Statistics Report</h2>
@@ -90,17 +90,22 @@ const sendDailyReportEmail = async (stats) => {
                   <th style="padding: 10px; text-align: center;">Uploaded</th>
                   <th style="padding: 10px; text-align: center;">Approved</th>
                   <th style="padding: 10px; text-align: center;">Rejected</th>
+                  <th style="padding: 10px; text-align: right;">Amount (Rs.)</th>
                 </tr>
               </thead>
               <tbody>
-                ${stats.taskBreakdown.map((task, index) => `
+                ${stats.taskBreakdown.map((task, index) => {
+                  const ratePerImage = 4;
+                  const taskAmount = task.approved * ratePerImage;
+                  return `
                   <tr style="background-color: ${index % 2 === 0 ? '#ffffff' : '#f8f9fa'};">
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;">${task.taskTitle}</td>
                     <td style="padding: 10px; text-align: center; border-bottom: 1px solid #ddd;">${task.uploaded}</td>
                     <td style="padding: 10px; text-align: center; border-bottom: 1px solid #ddd; color: #27ae60;">${task.approved}</td>
                     <td style="padding: 10px; text-align: center; border-bottom: 1px solid #ddd; color: #e74c3c;">${task.rejected}</td>
+                    <td style="padding: 10px; text-align: right; border-bottom: 1px solid #ddd; font-weight: bold; color: #16a34a;">Rs.${taskAmount.toLocaleString('en-IN')}</td>
                   </tr>
-                `).join('')}
+                `}).join('')}
               </tbody>
             </table>
           </div>
@@ -113,8 +118,15 @@ const sendDailyReportEmail = async (stats) => {
             <p style="margin: 5px 0;">Pending Rate: <strong>${stats.pendingRate}%</strong></p>
           </div>
 
+          <div style="background-color: #e8f5e9; padding: 15px; border-radius: 5px; margin: 15px 0;">
+            <h3 style="color: #16a34a; margin-top: 0;">Financial Summary</h3>
+            <p style="margin: 5px 0; font-size: 16px;">Rate per Approved Image: <strong>Rs.4</strong></p>
+            <p style="margin: 5px 0; font-size: 16px;">Total Approved Images: <strong>${stats.totalApproved}</strong></p>
+            <p style="margin: 10px 0 5px 0; font-size: 20px; color: #16a34a;">Total Amount: <strong>Rs.${(stats.totalApproved * 4).toLocaleString('en-IN')}</strong></p>
+          </div>
+
           <p style="color: #7f8c8d; font-size: 12px; margin-top: 30px;">
-            This is an automated daily report sent at 7:00 PM from the Image Scanner System.
+            This is an automated daily report sent at 7:00 PM from the Genius Labs Image Accumulator System.
           </p>
         </div>
       `

@@ -192,7 +192,7 @@ export default function AdminDashboard() {
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", "image_report.pdf");
+      link.setAttribute("download", "genius_labs_image_accumulator_report.pdf");
       document.body.appendChild(link);
       link.click();
       link.remove();

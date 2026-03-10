@@ -26,52 +26,188 @@ router.get("/report/pdf", verifyAdmin, (req, res) => {
 
     const stats = results[0];
     const ratePerImage = 4;
-    const totalAmount = stats.approved_images * ratePerImage;
 
-    const doc = new PDFDocument({ margin: 50 });
+    // Get task-wise breakdown
+    const taskQuery = `
+      SELECT 
+        t.id,
+        t.title as task_title,
+        COUNT(i.id) as uploaded,
+        SUM(CASE WHEN i.status = 'approved' THEN 1 ELSE 0 END) as approved,
+        SUM(CASE WHEN i.status = 'rejected' THEN 1 ELSE 0 END) as rejected,
+        SUM(CASE WHEN i.status = 'pending' THEN 1 ELSE 0 END) as pending
+      FROM tasks t
+      LEFT JOIN images i ON t.id = i.task_id
+      GROUP BY t.id, t.title
+      HAVING COUNT(i.id) > 0
+      ORDER BY t.created_at DESC
+    `;
 
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", "attachment; filename=image_report.pdf");
+    db.query(taskQuery, (err2, taskResults) => {
+      if (err2) {
+        console.error('Error fetching task breakdown:', err2);
+        return res.status(500).json({ message: "Failed to fetch task breakdown" });
+      }
 
-    doc.pipe(res);
+      const taskBreakdown = taskResults.map(task => ({
+        taskTitle: task.task_title,
+        uploaded: parseInt(task.uploaded) || 0,
+        approved: parseInt(task.approved) || 0,
+        rejected: parseInt(task.rejected) || 0,
+        pending: parseInt(task.pending) || 0,
+        amount: (parseInt(task.approved) || 0) * ratePerImage
+      }));
 
-    // Title
-    doc.fontSize(24).font("Helvetica-Bold").text("Image Scanner Report", { align: "center" });
-    doc.moveDown(0.5);
-    doc.fontSize(10).font("Helvetica").fillColor("#666").text(`Generated on: ${new Date().toLocaleString()}`, { align: "center" });
-    doc.moveDown(2);
+      const totalAmount = stats.approved_images * ratePerImage;
 
-    // Summary Section
-    doc.fontSize(16).font("Helvetica-Bold").fillColor("#000").text("Summary", { underline: true });
-    doc.moveDown(0.5);
+      const doc = new PDFDocument({ margin: 50 });
 
-    const summaryData = [
-      ["Total Tasks", stats.total_tasks],
-      ["Open Tasks", stats.open_tasks],
-      ["Total Images Uploaded", stats.total_images],
-      ["Pending Images", stats.pending_images],
-      ["Approved Images", stats.approved_images],
-      ["Rejected Images", stats.rejected_images]
-    ];
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", "attachment; filename=genius_labs_image_accumulator_report.pdf");
 
-    doc.fontSize(12).font("Helvetica");
-    summaryData.forEach(([label, value]) => {
-      doc.text(`${label}: ${value}`, { continued: false });
+      doc.pipe(res);
+
+      // Title
+      doc.fontSize(24).font("Helvetica-Bold").text("Genius Labs Image Accumulator Report", { align: "center" });
+      doc.moveDown(0.5);
+      doc.fontSize(10).font("Helvetica").fillColor("#666").text(`Generated on: ${new Date().toLocaleString()}`, { align: "center" });
+      doc.moveDown(2);
+
+      // Overall Summary Section with background
+      doc.fontSize(16).font("Helvetica-Bold").fillColor("#000").text("Overall Statistics", { underline: true });
+      doc.moveDown(0.8);
+
+      // Background box for overall stats
+      const statsBoxY = doc.y;
+      doc.roundedRect(50, statsBoxY, 495, 110, 5).fillAndStroke("#e8f5e9", "#d4edda");
+      
+      doc.fontSize(12).font("Helvetica").fillColor("#000");
+      let statsY = statsBoxY + 10;
+      const summaryData = [
+        ["Total Tasks", stats.total_tasks],
+        ["Open Tasks", stats.open_tasks],
+        ["Total Images Uploaded", stats.total_images],
+        ["Pending Images", stats.pending_images],
+        ["Approved Images", stats.approved_images],
+        ["Rejected Images", stats.rejected_images]
+      ];
+
+      summaryData.forEach(([label, value]) => {
+        doc.text(`${label}: `, 60, statsY, { continued: true, width: 200 });
+        doc.font("Helvetica-Bold").text(`${value}`, { continued: false });
+        doc.font("Helvetica");
+        statsY += 18;
+      });
+
+      doc.y = statsBoxY + 120;
+      doc.moveDown(1.5);
+
+      // Task-wise Breakdown Section
+      if (taskBreakdown && taskBreakdown.length > 0) {
+        doc.fontSize(16).font("Helvetica-Bold").fillColor("#000").text("Task-wise Breakdown", { underline: true });
+        doc.moveDown(0.8);
+
+        const tableTop = doc.y;
+        const rowHeight = 30;
+        const headerHeight = 25;
+        
+        // Column definitions with better spacing
+        const columns = [
+          { header: "Task", x: 50, width: 210 },
+          { header: "Uploaded", x: 260, width: 70 },
+          { header: "Approved", x: 330, width: 70 },
+          { header: "Rejected", x: 400, width: 70 },
+          { header: "Amount (Rs.)", x: 470, width: 75 }
+        ];
+
+        // Table Header with dark background
+        doc.roundedRect(50, tableTop, 495, headerHeight, 3).fillAndStroke("#34495e", "#2c3e50");
+        doc.fontSize(10).font("Helvetica-Bold").fillColor("#ffffff");
+        
+        columns.forEach(col => {
+          if (col.header === "Task") {
+            doc.text(col.header, col.x + 8, tableTop + 8, { width: col.width - 16 });
+          } else {
+            doc.text(col.header, col.x, tableTop + 8, { width: col.width, align: "center" });
+          }
+        });
+
+        let currentY = tableTop + headerHeight;
+
+        // Table Rows
+        doc.fontSize(10).font("Helvetica");
+        taskBreakdown.forEach((task, index) => {
+          // Check if we need a new page
+          if (currentY > 700) {
+            doc.addPage();
+            currentY = 50;
+          }
+
+          const bgColor = index % 2 === 0 ? "#ffffff" : "#f8f9fa";
+          doc.rect(50, currentY, 495, rowHeight).fillAndStroke(bgColor, "#d0d0d0");
+          
+          const textY = currentY + 10;
+          
+          // Task name (left aligned)
+          doc.fillColor("#000");
+          doc.text(task.taskTitle, columns[0].x + 8, textY, { width: columns[0].width - 16, ellipsis: true });
+          
+          // Uploaded (center aligned)
+          doc.fillColor("#2c3e50");
+          const uploadedText = String(task.uploaded);
+          doc.text(uploadedText, columns[1].x + (columns[1].width - doc.widthOfString(uploadedText)) / 2, textY);
+          
+          // Approved (center aligned, green)
+          doc.fillColor("#16a34a").font("Helvetica-Bold");
+          const approvedText = String(task.approved);
+          doc.text(approvedText, columns[2].x + (columns[2].width - doc.widthOfString(approvedText)) / 2, textY);
+          
+          // Rejected (center aligned, red)
+          doc.fillColor("#dc2626");
+          const rejectedText = String(task.rejected);
+          doc.text(rejectedText, columns[3].x + (columns[3].width - doc.widthOfString(rejectedText)) / 2, textY);
+          
+          // Amount (right aligned, bold)
+          doc.fillColor("#16a34a").font("Helvetica-Bold");
+          const amountText = task.amount.toLocaleString("en-IN");
+          doc.text(amountText, columns[4].x + columns[4].width - doc.widthOfString(amountText) - 8, textY);
+
+          doc.font("Helvetica");
+          currentY += rowHeight;
+        });
+
+        // Set cursor position after table
+        doc.x = 50;
+        doc.y = currentY + 20;
+      }
+
+      // Financial Summary Section with background box
+      // Check if we need a new page
+      if (doc.y > 650) {
+        doc.addPage();
+        doc.y = 50;
+      }
+
+      doc.fontSize(16).font("Helvetica-Bold").fillColor("#000");
+      doc.text("Financial Summary", 50, doc.y, { underline: true });
+      doc.moveDown(1);
+
+      const boxY = doc.y;
+      doc.roundedRect(50, boxY, 495, 85, 5).fillAndStroke("#e8f5e9", "#c3e6cb");
+      
+      doc.fontSize(13).font("Helvetica").fillColor("#2c3e50");
+      doc.text("Rate per Approved Image: ", 60, boxY + 15, { continued: true });
+      doc.font("Helvetica-Bold").text(`Rs.${ratePerImage}`);
+      
+      doc.font("Helvetica");
+      doc.text("Total Approved Images: ", 60, boxY + 35, { continued: true });
+      doc.font("Helvetica-Bold").text(`${stats.approved_images}`);
+      
+      doc.fontSize(18).font("Helvetica-Bold").fillColor("#16a34a");
+      doc.text(`Total Amount: Rs.${totalAmount.toLocaleString("en-IN")}`, 60, boxY + 55);
+
+      doc.end();
     });
-
-    doc.moveDown(2);
-
-    // Financial Section
-    doc.fontSize(16).font("Helvetica-Bold").text("Financial Summary", { underline: true });
-    doc.moveDown(0.5);
-    doc.fontSize(12).font("Helvetica");
-    doc.text(`Rate per Approved Image: Rs.${ratePerImage}`);
-    doc.text(`Total Approved Images: ${stats.approved_images}`);
-    doc.moveDown(0.5);
-    doc.fontSize(14).font("Helvetica-Bold").fillColor("#16a34a");
-    doc.text(`Total Amount: Rs.${totalAmount.toLocaleString("en-IN")}`);
-
-    doc.end();
   });
 });
 

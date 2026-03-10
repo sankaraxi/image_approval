@@ -13,7 +13,7 @@ To enable email notifications, you need to generate a Gmail App Password:
 2. **Generate an App Password**
    - Visit: https://myaccount.google.com/apppasswords
    - Select "Mail" as the app
-   - Select "Other" as the device and name it (e.g., "Image Scanner App")
+   - Select "Other" as the device and name it (e.g., "Genius Labs Image Accumulator App")
    - Click "Generate"
    - Copy the 16-character password
 
