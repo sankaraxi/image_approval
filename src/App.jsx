@@ -3,6 +3,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import StudentDashboard from "./pages/StudentDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import BillerDashboard from "./pages/BillerDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
 import "./index.css";
@@ -34,6 +35,16 @@ function App() {
             element={
               <ProtectedRoute role="admin">
                 <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* -------- BILLER ROUTE -------- */}
+          <Route
+            path="/biller"
+            element={
+              <ProtectedRoute role="biller">
+                <BillerDashboard />
               </ProtectedRoute>
             }
           />

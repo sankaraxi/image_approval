@@ -16,6 +16,44 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Table structure for table `billed_tasks`
+--
+
+DROP TABLE IF EXISTS `billed_tasks`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `billed_tasks` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `task_id` int NOT NULL,
+  `task_title` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `total_images` int NOT NULL,
+  `approved_images` int NOT NULL,
+  `rejected_images` int NOT NULL,
+  `amount_per_image` decimal(10,2) NOT NULL DEFAULT '4.00',
+  `total_amount` decimal(10,2) NOT NULL,
+  `start_date` date DEFAULT NULL,
+  `end_date` date DEFAULT NULL,
+  `billed_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `billed_by` int NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_task_id` (`task_id`),
+  KEY `idx_billed_at` (`billed_at`),
+  KEY `fk_billing_user` (`billed_by`),
+  CONSTRAINT `fk_billed_task` FOREIGN KEY (`task_id`) REFERENCES `tasks` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_billing_user` FOREIGN KEY (`billed_by`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `billed_tasks`
+--
+
+LOCK TABLES `billed_tasks` WRITE;
+/*!40000 ALTER TABLE `billed_tasks` DISABLE KEYS */;
+/*!40000 ALTER TABLE `billed_tasks` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `categories`
 --
 
@@ -86,7 +124,7 @@ CREATE TABLE `images` (
   CONSTRAINT `images_ibfk_3` FOREIGN KEY (`main_category_id`) REFERENCES `categories` (`id`),
   CONSTRAINT `images_ibfk_4` FOREIGN KEY (`approved_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `images_ibfk_5` FOREIGN KEY (`rejected_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -95,7 +133,6 @@ CREATE TABLE `images` (
 
 LOCK TABLES `images` WRITE;
 /*!40000 ALTER TABLE `images` DISABLE KEYS */;
-INSERT INTO `images` VALUES (1,1,2,'MOB_BLR_RC_20260202_F001.jpg','city-1030x685.jpg','MOB_BLR_RC_20260202_F001.jpg',35718,'image/jpeg',1,'{\"city\": \"BLR\", \"date\": \"20260202\", \"index\": 1, \"camera\": \"RC\", \"generatedName\": \"MOB_BLR_RC_20260202_F001.jpg\", \"studentSubSelections\": {}}','pending',NULL,NULL,NULL,'2026-02-06 07:37:03',NULL,NULL),(2,1,2,'MOB_BLR_RC_20260202_F002.jpg','images.jpg','MOB_BLR_RC_20260202_F002.jpg',12972,'image/jpeg',1,'{\"city\": \"BLR\", \"date\": \"20260202\", \"index\": 2, \"camera\": \"RC\", \"generatedName\": \"MOB_BLR_RC_20260202_F002.jpg\", \"studentSubSelections\": {}}','approved',1,NULL,NULL,'2026-02-06 07:37:03','2026-02-06 07:42:18',NULL),(5,4,7,'MOB_BLR_FC_20260224_F001.jpeg','Creative Branding.jpg.jpeg','MOB_BLR_FC_20260224_F001.jpeg',6403299,'image/jpeg',1,'{\"city\": \"BLR\", \"date\": \"20260224\", \"index\": 1, \"camera\": \"FC\", \"generatedName\": \"MOB_BLR_FC_20260224_F001.jpeg\", \"studentSubSelections\": {\"2\": \"7\", \"3\": \"14\", \"4\": \"18\", \"5\": \"25\"}}','approved',8,NULL,NULL,'2026-02-24 10:01:14','2026-02-24 10:11:27',NULL),(6,7,7,'Chilli_Tamil_Coim_24022026_healthyPlant.jpg','lip-balm-non-tinted-2.jpg','Chilli_Tamil_Coim_24022026_healthyPlant.jpg',694316,'image/jpeg',68,'{\"date\": \"24022026\", \"index\": 1, \"state\": \"Tamil\", \"cropName\": \"Chilli\", \"district\": \"Coim\", \"generatedName\": \"Chilli_Tamil_Coim_24022026_healthyPlant.jpg\", \"observedCondition\": \"healthyPlant\", \"studentSubSelections\": {\"69\": \"74\", \"70\": \"77\", \"71\": \"80\", \"72\": \"92\", \"73\": \"93\"}}','pending',NULL,NULL,NULL,'2026-02-26 06:02:32',NULL,NULL);
 /*!40000 ALTER TABLE `images` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -153,7 +190,7 @@ CREATE TABLE `task_subcategory_requirements` (
   CONSTRAINT `task_subcategory_requirements_ibfk_1` FOREIGN KEY (`task_id`) REFERENCES `tasks` (`id`) ON DELETE CASCADE,
   CONSTRAINT `task_subcategory_requirements_ibfk_2` FOREIGN KEY (`subcategory_id`) REFERENCES `categories` (`id`),
   CONSTRAINT `task_subcategory_requirements_ibfk_3` FOREIGN KEY (`subsub_category_id`) REFERENCES `categories` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=46 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=51 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -162,7 +199,7 @@ CREATE TABLE `task_subcategory_requirements` (
 
 LOCK TABLES `task_subcategory_requirements` WRITE;
 /*!40000 ALTER TABLE `task_subcategory_requirements` DISABLE KEYS */;
-INSERT INTO `task_subcategory_requirements` VALUES (1,1,2,7),(2,1,3,14),(3,1,4,18),(4,1,5,25),(5,1,6,28),(16,4,2,NULL),(17,4,3,NULL),(18,4,4,NULL),(19,4,5,NULL),(20,4,6,NULL),(26,6,2,7),(27,6,3,15),(28,6,4,19),(29,6,5,24),(30,6,6,28),(36,5,32,NULL),(37,5,33,NULL),(38,5,34,NULL),(39,5,35,NULL),(40,5,36,NULL),(41,7,69,NULL),(42,7,70,NULL),(43,7,71,NULL),(44,7,72,NULL),(45,7,73,NULL);
+INSERT INTO `task_subcategory_requirements` VALUES (1,1,2,7),(2,1,3,14),(3,1,4,18),(4,1,5,25),(5,1,6,28),(16,4,2,NULL),(17,4,3,NULL),(18,4,4,NULL),(19,4,5,NULL),(20,4,6,NULL),(26,6,2,7),(27,6,3,15),(28,6,4,19),(29,6,5,24),(30,6,6,28),(36,5,32,NULL),(37,5,33,NULL),(38,5,34,NULL),(39,5,35,NULL),(40,5,36,NULL),(41,7,69,NULL),(42,7,70,NULL),(43,7,71,NULL),(44,7,72,NULL),(45,7,73,NULL),(46,8,69,74),(47,8,70,78),(48,8,71,82),(49,8,72,90),(50,8,73,98);
 /*!40000 ALTER TABLE `task_subcategory_requirements` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -190,13 +227,18 @@ CREATE TABLE `tasks` (
   `start_date` date DEFAULT NULL,
   `end_date` date DEFAULT NULL,
   `final_review_date` date DEFAULT NULL,
+  `is_billed` tinyint(1) DEFAULT '0' COMMENT 'Whether this task has been billed',
+  `billed_at` timestamp NULL DEFAULT NULL COMMENT 'When the task was marked as billed',
+  `billed_by` int DEFAULT NULL COMMENT 'Admin who generated the bill',
   PRIMARY KEY (`id`),
   KEY `main_category_id` (`main_category_id`),
   KEY `created_by` (`created_by`),
   KEY `idx_status` (`status`),
+  KEY `fk_billed_by` (`billed_by`),
+  CONSTRAINT `fk_billed_by` FOREIGN KEY (`billed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `tasks_ibfk_1` FOREIGN KEY (`main_category_id`) REFERENCES `categories` (`id`),
   CONSTRAINT `tasks_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -205,7 +247,7 @@ CREATE TABLE `tasks` (
 
 LOCK TABLES `tasks` WRITE;
 /*!40000 ALTER TABLE `tasks` DISABLE KEYS */;
-INSERT INTO `tasks` VALUES (1,'Coimbatore Roads','Images for Coimbatore',1,100,2,1,0,1,'in_progress',1,'2026-02-06 07:34:47','2026-02-06 07:42:19',NULL,NULL,NULL),(4,'test mail','test desc',1,100,1,1,0,0,'in_progress',5,'2026-02-12 09:32:22','2026-02-24 10:11:27',NULL,NULL,NULL),(5,'test mail iifrrdee5','test descri',31,1004,0,0,0,0,'open',5,'2026-02-12 09:33:28','2026-02-24 09:30:03',NULL,NULL,NULL),(6,'test again for mail trigger','df',1,100,0,0,0,1,'open',5,'2026-02-12 10:32:00','2026-02-12 10:32:00',NULL,NULL,NULL),(7,'agri','agri test',68,100,1,0,0,0,'in_progress',8,'2026-02-26 05:49:21','2026-02-26 06:02:32',NULL,NULL,NULL);
+INSERT INTO `tasks` VALUES (1,'Coimbatore Roads','Images for Coimbatore',1,100,2,1,0,1,'in_progress',1,'2026-02-06 07:34:47','2026-03-10 07:48:26',NULL,NULL,NULL,1,'2026-03-10 07:48:27',8),(4,'test mail','test desc',1,100,1,1,0,0,'in_progress',5,'2026-02-12 09:32:22','2026-03-10 09:42:46',NULL,NULL,NULL,1,'2026-03-10 09:42:46',9),(5,'test mail iifrrdee5','test descri',31,1004,0,0,0,0,'open',5,'2026-02-12 09:33:28','2026-03-10 09:57:50',NULL,NULL,NULL,1,'2026-03-10 09:57:51',9),(6,'test again for mail trigger','df',1,100,0,0,0,1,'open',5,'2026-02-12 10:32:00','2026-03-10 09:55:27',NULL,NULL,NULL,1,'2026-03-10 09:55:28',9),(7,'agri','agri test',68,100,1,0,0,0,'in_progress',8,'2026-02-26 05:49:21','2026-03-10 09:55:27',NULL,NULL,NULL,1,'2026-03-10 09:55:28',9),(8,'new task test','description',68,100,0,0,0,1,'in_progress',8,'2026-03-10 09:45:42','2026-03-10 09:55:27','2026-03-10','2026-03-17','2026-03-24',1,'2026-03-10 09:55:28',9);
 /*!40000 ALTER TABLE `tasks` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -220,14 +262,14 @@ CREATE TABLE `users` (
   `id` int NOT NULL AUTO_INCREMENT,
   `username` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `role` enum('admin','student') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `role` enum('admin','student','biller') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `email` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `full_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`),
   KEY `idx_username` (`username`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -236,7 +278,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'admin','admin123','admin',NULL,'System Admin','2026-02-06 07:34:37'),(2,'student','student1','student',NULL,'Student','2026-02-06 07:35:42'),(3,'student2','student23','student',NULL,'Student A','2026-02-06 08:00:17'),(4,'robin_joshi','evaluator1@123','admin',NULL,'Robin Joshi','2026-02-06 17:40:59'),(5,'prajwal_pb','evaluator2@123','admin',NULL,'Prajwal Pb','2026-02-06 17:41:47'),(6,'mamybin_k_uthuppan','evaluator3@123','admin',NULL,'MaMybin K Uthuppan','2026-02-06 17:42:05'),(7,'demouser@kggeniuslabs.com','demouser1@123','student','','Demo User','2026-02-06 17:43:33'),(8,'suganya_gautam','evaluator4@123','admin',NULL,'Suganya Gautam','2026-02-12 06:20:11');
+INSERT INTO `users` VALUES (1,'admin','admin123','admin',NULL,'System Admin','2026-02-06 07:34:37'),(2,'student','student1','student',NULL,'Student','2026-02-06 07:35:42'),(3,'student2','student23','student',NULL,'Student A','2026-02-06 08:00:17'),(4,'robin_joshi','evaluator1@123','admin',NULL,'Robin Joshi','2026-02-06 17:40:59'),(5,'prajwal_pb','evaluator2@123','admin',NULL,'Prajwal Pb','2026-02-06 17:41:47'),(6,'mamybin_k_uthuppan','evaluator3@123','admin',NULL,'MaMybin K Uthuppan','2026-02-06 17:42:05'),(7,'demouser@kggeniuslabs.com','demouser1@123','student','','Demo User','2026-02-06 17:43:33'),(8,'suganya_gautam','evaluator4@123','admin',NULL,'Suganya Gautam','2026-02-12 06:20:11'),(9,'biller','biller123','biller','billing@kggeniuslabs.com','Billing Department','2026-03-10 08:13:10');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -249,4 +291,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-03-09 10:26:08
+-- Dump completed on 2026-03-17 10:14:15

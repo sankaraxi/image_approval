@@ -304,9 +304,9 @@ export default function StudentDashboard() {
           ) : (
             filteredImages.map((img) => (
               <div key={img.id} className="card-premium group">
-                <div className="relative aspect-video bg-gray-200 overflow-hidden cursor-pointer" onClick={() => setPreviewImage(`http://103.118.158.33:5003/uploads/${img.filename}`)}>
+                <div className="relative aspect-video bg-gray-200 overflow-hidden cursor-pointer" onClick={() => setPreviewImage(`http://localhost:5003/uploads/${img.filename}`)}>
                   <img
-                    src={`http://103.118.158.33:5003/uploads/${img.filename}`}
+                    src={`http://localhost:5003/uploads/${img.filename}`}
                     alt={img.renamed_filename}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />

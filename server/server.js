@@ -11,6 +11,7 @@ const studentRoutes  = require("./routes/studentRoutes");
 const adminRoutes    = require("./routes/adminRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const taskRoutes     = require("./routes/taskRoutes");
+const billerRoutes   = require("./routes/billerRoutes");
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/student",    studentRoutes);
 app.use("/api/admin",      adminRoutes);
 app.use("/api/tasks",      taskRoutes);
+app.use("/api/biller",     billerRoutes);
 
 app.listen(5003, () => {
   console.log("Server running on port 5003");
@@ -86,7 +88,7 @@ cron.schedule('00 19 * * *', async () => {
       const rejectionRate = totalUploaded > 0 ? ((totalRejected / totalUploaded) * 100).toFixed(2) : 0;
       const pendingRate = totalUploaded > 0 ? ((totalPending / totalUploaded) * 100).toFixed(2) : 0;
 
-      // Get task-wise breakdown
+      // Get task-wise breakdown (exclude billed tasks)
       const taskQuery = `
         SELECT 
           t.id,
@@ -96,6 +98,7 @@ cron.schedule('00 19 * * *', async () => {
           SUM(CASE WHEN i.status = 'rejected' THEN 1 ELSE 0 END) as rejected
         FROM tasks t
         LEFT JOIN images i ON t.id = i.task_id
+        WHERE (t.is_billed IS NULL OR t.is_billed = 0)
         GROUP BY t.id, t.title
         HAVING COUNT(i.id) > 0
         ORDER BY t.created_at DESC
