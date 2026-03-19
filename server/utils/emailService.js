@@ -6,7 +6,7 @@ const createTransporter = () => {
     service: 'gmail',
     auth: {
       user: process.env.EMAIL_USER || 'info@kggeniuslabs.com',
-      pass: process.env.EMAIL_PASSWORD // Gmail App Password
+      pass: process.env.EMAIL_PASSWORD || 'cgzz hngh entc qnwd' // Gmail App Password
     }
   });
 };
@@ -141,7 +141,100 @@ const sendDailyReportEmail = async (stats) => {
   }
 };
 
+/**
+ * Send billing email with task-wise breakdown
+ * @param {Object} billingData - Billing data including tasks and totals
+ */
+const sendBillingEmail = async (billingData) => {
+  try {
+    const transporter = createTransporter();
+    
+    const { tasks, totalApproved, totalRejected, totalUploaded, totalPending, totalAmount, rates } = billingData;
+    
+    const mailOptions = {
+      from: 'info@kggeniuslabs.com',
+      to:'sankar.k@kggeniuslabs.com',
+      // to: 'krishnapriya.p@kggeniuslabs.com',
+      // cc: 'chitradevi.m@kggeniuslabs.com',
+      subject: `Billing Report - Genius Labs Image Accumulator (${new Date().toLocaleDateString()})`,
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px;">
+          <h2 style="color: #2c3e50;">Genius Labs Image Accumulator - Billing Report</h2>
+          <p style="color: #7f8c8d;">Generated on: ${new Date().toLocaleString()}</p>
+          
+          <div style="background-color: #e8f5e9; padding: 15px; border-radius: 5px; margin: 15px 0;">
+            <h3 style="color: #27ae60; margin-top: 0;">Overall Summary</h3>
+            <p style="margin: 10px 0;"><strong>Total Tasks Selected:</strong> ${tasks.length}</p>
+            <p style="margin: 10px 0;"><strong>Total Images Uploaded:</strong> ${totalUploaded}</p>
+            <p style="margin: 10px 0;"><strong>Approved Images:</strong> ${totalApproved}</p>
+            <p style="margin: 10px 0;"><strong>Rejected Images:</strong> ${totalRejected}</p>
+            <p style="margin: 10px 0;"><strong>Pending Images:</strong> ${totalPending}</p>
+          </div>
+
+          <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+            <h3 style="color: #2c3e50; margin-top: 0;">Task-wise Breakdown</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="background-color: #34495e; color: white;">
+                  <th style="padding: 10px; text-align: left;">Task Name</th>
+                  <th style="padding: 10px; text-align: center;">Start Date</th>
+                  <th style="padding: 10px; text-align: center;">End Date</th>
+                  <th style="padding: 10px; text-align: center;">Uploaded</th>
+                  <th style="padding: 10px; text-align: center;">Approved</th>
+                  <th style="padding: 10px; text-align: center;">Rejected</th>
+                  <th style="padding: 10px; text-align: center;">Pending</th>
+                  <th style="padding: 10px; text-align: center;">Per Image Cost</th>
+                  <th style="padding: 10px; text-align: right;">Total Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${tasks.map((task, index) => `
+                  <tr style="background-color: ${index % 2 === 0 ? '#ffffff' : '#f8f9fa'};">
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${task.taskTitle}</td>
+                    <td style="padding: 10px; text-align: center; border-bottom: 1px solid #ddd;">${task.startDate ? new Date(task.startDate).toLocaleDateString('en-IN') : ''}</td>
+                    <td style="padding: 10px; text-align: center; border-bottom: 1px solid #ddd;">${task.endDate ? new Date(task.endDate).toLocaleDateString('en-IN') : ''}</td>
+                    <td style="padding: 10px; text-align: center; border-bottom: 1px solid #ddd;">${task.uploaded}</td>
+                    <td style="padding: 10px; text-align: center; border-bottom: 1px solid #ddd; color: #27ae60;">${task.approved}</td>
+                    <td style="padding: 10px; text-align: center; border-bottom: 1px solid #ddd; color: #e74c3c;">${task.rejected}</td>
+                    <td style="padding: 10px; text-align: center; border-bottom: 1px solid #ddd; color: #f39c12;">${task.pending}</td>
+                    <td style="padding: 10px; text-align: center; border-bottom: 1px solid #ddd;">Rs.${task.approved > 0 ? (task.amount / task.approved).toFixed(2) : '0.00'}</td>
+                    <td style="padding: 10px; text-align: right; border-bottom: 1px solid #ddd; font-weight: bold; color: #16a34a;">Rs.${task.amount.toLocaleString('en-IN')}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+              <tfoot>
+                <tr style="background-color: #34495e; color: white; font-weight: bold;">
+                  <td colspan="8" style="text-align: right; padding: 10px;">Total Amount:</td>
+                  <td style="text-align: right; padding: 10px;">Rs.${totalAmount.toLocaleString('en-IN')}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div style="background-color: #e8f5e9; padding: 15px; border-radius: 5px; margin: 15px 0;">
+            <h3 style="color: #16a34a; margin-top: 0;">Total Amount</h3>
+            <p style="margin: 10px 0; font-size: 24px; color: #16a34a; font-weight: bold;">Rs.${totalAmount.toLocaleString('en-IN')}</p>
+            <p style="margin: 5px 0; font-size: 12px; color: #7f8c8d;">Rates: Standard Rs.4, Agri Diseased Rs.${rates[75]}, Pest Rs.${rates[76]}</p>
+          </div>
+
+          <p style="color: #7f8c8d; font-size: 12px; margin-top: 30px;">
+            This is an automated billing report from the Genius Labs Image Accumulator System.
+          </p>
+        </div>
+      `
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Billing email sent:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Error sending billing email:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendTaskCreationEmail,
-  sendDailyReportEmail
+  sendDailyReportEmail,
+  sendBillingEmail
 };

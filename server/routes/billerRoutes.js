@@ -1,7 +1,7 @@
 const express = require("express");
 const db = require("../db");
 const verifyBiller = require("../middleware/verifyBiller");
-const PDFDocument = require("pdfkit");
+const { sendBillingEmail } = require("../utils/emailService");
 
 const router = express.Router();
 
@@ -33,9 +33,9 @@ router.get("/tasks/unbilled", verifyBiller, async (req, res) => {
 router.get("/billing-history", verifyBiller, async (req, res) => {
   try {
     const [rows] = await db.promise().query(`
-      SELECT bt.*, u.username as billed_by_name, u.full_name as billed_by_full_name
+      SELECT bt.*, i.id as invoice_id, i.invoice_number, i.status as invoice_status, i.transaction_id, i.payment_date, i.payment_amount
       FROM billed_tasks bt
-      LEFT JOIN users u ON bt.billed_by = u.id
+      LEFT JOIN invoices i ON bt.invoice_id = i.id
       ORDER BY bt.billed_at DESC
       LIMIT 200
     `);
@@ -48,26 +48,44 @@ router.get("/billing-history", verifyBiller, async (req, res) => {
 
 /* ================= GENERATE BILL PDF ================= */
 router.post("/generate-bill", verifyBiller, async (req, res) => {
-  const { taskIds } = req.body;
+  const { taskIds, agriRates } = req.body;
   if (!taskIds || !Array.isArray(taskIds) || taskIds.length === 0) {
     return res.status(400).json({ message: "Task IDs required" });
   }
 
+  const subcategoryMap = {
+    "healthyPlant": 74,
+    "diseasedPlant": 75,
+    "pestAffected": 76,
+  };
+  const rates = {
+    74: 4, // Healthy Plant
+    75: agriRates?.diseasedPlant || 4, // Diseased Plant - biller entered
+    76: agriRates?.pestAffected || 4, // Pest-Affected Plant - biller entered
+  };
+  const categoryNames = {
+    74: 'Healthy Plant',
+    75: 'Diseased Plant',
+    76: 'Pest-Affected Plant',
+  };
+  const defaultRate = 4;
+
   const placeholders = taskIds.map(() => "?").join(",");
-  const ratePerImage = 4;
 
   try {
     const [taskResults] = await db.promise().query(`
       SELECT 
-        t.id, t.title as task_title, t.start_date, t.end_date, t.final_review_date,
+        t.id, t.title as task_title, t.start_date, t.end_date, t.final_review_date, t.main_category_id,
+        c.name as category_name,
         COUNT(i.id) as uploaded,
         SUM(CASE WHEN i.status = 'approved' THEN 1 ELSE 0 END) as approved,
         SUM(CASE WHEN i.status = 'rejected' THEN 1 ELSE 0 END) as rejected,
         SUM(CASE WHEN i.status = 'pending'  THEN 1 ELSE 0 END) as pending
       FROM tasks t
+      LEFT JOIN categories c ON t.main_category_id = c.id
       LEFT JOIN images i ON t.id = i.task_id
       WHERE t.id IN (${placeholders}) AND (t.is_billed IS NULL OR t.is_billed = 0)
-      GROUP BY t.id, t.title, t.start_date, t.end_date, t.final_review_date
+      GROUP BY t.id, t.title, t.start_date, t.end_date, t.final_review_date, t.main_category_id, c.name
       ORDER BY t.created_at DESC
     `, taskIds);
 
@@ -81,162 +99,126 @@ router.post("/generate-bill", verifyBiller, async (req, res) => {
       startDate: t.start_date,
       endDate: t.end_date,
       finalReviewDate: t.final_review_date,
+      main_category_id: t.main_category_id,
+      category_name: t.category_name,
       uploaded: parseInt(t.uploaded) || 0,
       approved: parseInt(t.approved) || 0,
       rejected: parseInt(t.rejected) || 0,
       pending: parseInt(t.pending) || 0,
-      amount: (parseInt(t.approved) || 0) * ratePerImage
+      // amount will be set later
     }));
+
+    // Get subcategory counts for agri tasks
+    const agriTaskIds = tasks.filter(t => t.main_category_id === 68).map(t => t.taskId);
+    let subCountsByTask = {};
+    if (agriTaskIds.length > 0) {
+      const subPlaceholders = agriTaskIds.map(() => "?").join(",");
+      const [subRows] = await db.promise().query(`
+        SELECT task_id, JSON_UNQUOTE(JSON_EXTRACT(naming_metadata, '$.observedCondition')) as obs_condition, COUNT(*) as count
+        FROM images
+        WHERE task_id IN (${subPlaceholders}) AND status = 'approved'
+        GROUP BY task_id, JSON_UNQUOTE(JSON_EXTRACT(naming_metadata, '$.observedCondition'))
+      `, agriTaskIds);
+      for (const row of subRows) {
+        if (!subCountsByTask[row.task_id]) subCountsByTask[row.task_id] = {};
+        const subId = subcategoryMap[row.obs_condition];
+        if (subId) {
+          subCountsByTask[row.task_id][subId] = row.count;
+        }
+      }
+    }
+
+    // Calculate amounts
+    for (const task of tasks) {
+      if (task.main_category_id === 68) {
+        let amount = 0;
+        const subBreakdown = {};
+        const subs = subCountsByTask[task.taskId] || {};
+        for (const [subIdStr, count] of Object.entries(subs)) {
+          const subId = parseInt(subIdStr);
+          const rate = rates[subId] || defaultRate;
+          const subAmount = count * rate;
+          amount += subAmount;
+          subBreakdown[subId] = { count, rate, amount: subAmount };
+        }
+        task.amount = amount;
+        task.subBreakdown = subBreakdown;
+      } else {
+        task.amount = task.approved * defaultRate;
+        task.subBreakdown = null;
+      }
+    }
 
     const totalApproved = tasks.reduce((s, t) => s + t.approved, 0);
     const totalRejected = tasks.reduce((s, t) => s + t.rejected, 0);
     const totalUploaded = tasks.reduce((s, t) => s + t.uploaded, 0);
     const totalPending  = tasks.reduce((s, t) => s + t.pending, 0);
-    const totalAmount   = totalApproved * ratePerImage;
+    const totalAmount = tasks.reduce((s, t) => s + t.amount, 0);
 
-    /* ---- Build PDF ---- */
-    const doc = new PDFDocument({ margin: 50 });
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename=genius_labs_billing_${Date.now()}.pdf`);
-    doc.pipe(res);
+    // Send billing email
+    const emailResult = await sendBillingEmail({ tasks, totalApproved, totalRejected, totalUploaded, totalPending, totalAmount, rates, categoryNames });
+    if (!emailResult.success) {
+      return res.status(500).json({ message: "Failed to send billing email" });
+    }
 
-    // Title
-    doc.fontSize(24).font("Helvetica-Bold").text("Genius Labs Image Accumulator Report", { align: "center" });
-    doc.moveDown(0.5);
-    doc.fontSize(10).font("Helvetica").fillColor("#666")
-       .text(`Generated on: ${new Date().toLocaleString()}`, { align: "center" });
-    doc.fontSize(10).fillColor("#e74c3c").text("BILLING REPORT", { align: "center" });
-    doc.moveDown(2);
+    // Create invoice
+    const invoiceNumber = `INV-${Date.now()}`;
+    const [invoiceResult] = await db.promise().query(
+      `INSERT INTO invoices (invoice_number, total_amount) VALUES (?, ?)`,
+      [invoiceNumber, totalAmount]
+    );
+    const invoiceId = invoiceResult.insertId;
 
-    // Overall Summary
-    doc.fontSize(16).font("Helvetica-Bold").fillColor("#000").text("Overall Summary", { underline: true });
-    doc.moveDown(0.8);
+    // Mark as billed
+    try {
+      const billedBy = req.user.id;
+      const billedAt = new Date();
 
-    const statsBoxY = doc.y;
-    doc.roundedRect(50, statsBoxY, 495, 90, 5).fillAndStroke("#e8f5e9", "#d4edda");
-    doc.fontSize(12).font("Helvetica").fillColor("#000");
-    let statsY = statsBoxY + 10;
-    [
-      ["Total Tasks Selected", tasks.length],
-      ["Total Images Uploaded", totalUploaded],
-      ["Approved Images", totalApproved],
-      ["Rejected Images", totalRejected],
-      ["Pending Images", totalPending]
-    ].forEach(([label, value]) => {
-      doc.text(`${label}: `, 60, statsY, { continued: true, width: 200 });
-      doc.font("Helvetica-Bold").text(`${value}`);
-      doc.font("Helvetica");
-      statsY += 16;
-    });
+      await db.promise().query(
+        `UPDATE tasks SET is_billed = 1, billed_at = ?, billed_by = ? WHERE id IN (${placeholders})`,
+        [billedAt, billedBy, ...taskIds]
+      );
 
-    doc.y = statsBoxY + 100;
-    doc.moveDown(1.5);
+      const inserts = tasks.map(t =>
+        db.promise().query(
+          `INSERT INTO billed_tasks
+           (task_id, task_title, total_images, approved_images, rejected_images,
+            amount_per_image, total_amount, start_date, end_date, billed_by, invoice_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [t.taskId, t.taskTitle, t.uploaded, t.approved, t.rejected,
+           t.approved > 0 ? t.amount / t.approved : 0, t.amount, t.startDate, t.endDate, billedBy, invoiceId]
+        )
+      );
+      await Promise.all(inserts);
 
-    // Task-wise Breakdown
-    doc.fontSize(16).font("Helvetica-Bold").fillColor("#000").text("Task-wise Breakdown", { underline: true });
-    doc.moveDown(0.8);
+      console.log(`Billed tasks [${taskIds}] under invoice ${invoiceNumber}`);
+    } catch (err) {
+      console.error("Error marking tasks billed:", err);
+      return res.status(500).json({ message: "Billing email sent but failed to mark tasks as billed" });
+    }
 
-    let currentY = doc.y;
-
-    tasks.forEach((task, idx) => {
-      if (currentY > 620) { doc.addPage(); currentY = 50; }
-
-      const cardH = 120;
-      const bg = idx % 2 === 0 ? "#f8f9fa" : "#ffffff";
-      doc.roundedRect(50, currentY, 495, cardH, 5).fillAndStroke(bg, "#d0d0d0");
-
-      // Title
-      doc.fontSize(13).font("Helvetica-Bold").fillColor("#2c3e50");
-      doc.text(task.taskTitle, 60, currentY + 10, { width: 475, ellipsis: true });
-
-      // Dates
-      let dateY = currentY + 30;
-      doc.fontSize(10).font("Helvetica").fillColor("#555");
-      if (task.startDate) {
-        doc.text("Start: ", 60, dateY, { continued: true });
-        doc.font("Helvetica-Bold").fillColor("#2c3e50").text(new Date(task.startDate).toLocaleDateString("en-IN"));
-        doc.font("Helvetica").fillColor("#555");
-      }
-      if (task.endDate) {
-        doc.text("End: ", 200, dateY, { continued: true });
-        doc.font("Helvetica-Bold").fillColor("#2c3e50").text(new Date(task.endDate).toLocaleDateString("en-IN"));
-        doc.font("Helvetica").fillColor("#555");
-      }
-      if (task.finalReviewDate) {
-        doc.text("Review: ", 340, dateY, { continued: true });
-        doc.font("Helvetica-Bold").fillColor("#2c3e50").text(new Date(task.finalReviewDate).toLocaleDateString("en-IN"));
-      }
-
-      // Stats row
-      dateY += 20;
-      doc.fontSize(10).font("Helvetica").fillColor("#2c3e50");
-      doc.text(`Uploaded: `, 60, dateY, { continued: true });
-      doc.font("Helvetica-Bold").text(`${task.uploaded}`, { continued: true });
-      doc.font("Helvetica").text(`  |  Approved: `, { continued: true });
-      doc.font("Helvetica-Bold").fillColor("#16a34a").text(`${task.approved}`, { continued: true });
-      doc.font("Helvetica").fillColor("#2c3e50").text(`  |  Rejected: `, { continued: true });
-      doc.font("Helvetica-Bold").fillColor("#dc2626").text(`${task.rejected}`, { continued: true });
-      doc.font("Helvetica").fillColor("#2c3e50").text(`  |  Pending: `, { continued: true });
-      doc.font("Helvetica-Bold").fillColor("#f59e0b").text(`${task.pending}`);
-
-      // Amount
-      dateY += 25;
-      doc.fontSize(14).font("Helvetica-Bold").fillColor("#16a34a");
-      doc.text(`Amount: Rs.${task.amount.toLocaleString("en-IN")}`, 60, dateY);
-
-      currentY += cardH + 10;
-    });
-
-    doc.x = 50;
-    doc.y = currentY + 10;
-    if (doc.y > 650) { doc.addPage(); doc.y = 50; }
-
-    // Financial Summary
-    doc.fontSize(16).font("Helvetica-Bold").fillColor("#000").text("Financial Summary", 50, doc.y, { underline: true });
-    doc.moveDown(1);
-    const boxY = doc.y;
-    doc.roundedRect(50, boxY, 495, 85, 5).fillAndStroke("#e8f5e9", "#c3e6cb");
-    doc.fontSize(13).font("Helvetica").fillColor("#2c3e50");
-    doc.text("Rate per Approved Image: ", 60, boxY + 15, { continued: true });
-    doc.font("Helvetica-Bold").text(`Rs.${ratePerImage}`);
-    doc.font("Helvetica").text("Total Approved Images: ", 60, boxY + 35, { continued: true });
-    doc.font("Helvetica-Bold").text(`${totalApproved}`);
-    doc.fontSize(18).font("Helvetica-Bold").fillColor("#16a34a");
-    doc.text(`Total Amount: Rs.${totalAmount.toLocaleString("en-IN")}`, 60, boxY + 55);
-
-    doc.end();
-
-    /* ---- Mark billed after PDF streams ---- */
-    doc.on("end", async () => {
-      try {
-        const billedBy = req.user.id;
-        const billedAt = new Date();
-
-        await db.promise().query(
-          `UPDATE tasks SET is_billed = 1, billed_at = ?, billed_by = ? WHERE id IN (${placeholders})`,
-          [billedAt, billedBy, ...taskIds]
-        );
-
-        const inserts = tasks.map(t =>
-          db.promise().query(
-            `INSERT INTO billed_tasks
-             (task_id, task_title, total_images, approved_images, rejected_images,
-              amount_per_image, total_amount, start_date, end_date, billed_by)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [t.taskId, t.taskTitle, t.uploaded, t.approved, t.rejected,
-             ratePerImage, t.amount, t.startDate, t.endDate, billedBy]
-          )
-        );
-        await Promise.all(inserts);
-
-        console.log(`Billed tasks [${taskIds}] by user ${billedBy}`);
-      } catch (err) {
-        console.error("Error marking tasks billed:", err);
-      }
-    });
+    res.json({ message: "Billing report sent via email successfully" });
   } catch (err) {
     console.error("/generate-bill error:", err);
     res.status(500).json({ message: "Internal server error" });
+  }
+});
+/* ================= MARK PAYMENT RECEIVED ================= */
+router.post("/mark-payment", verifyBiller, async (req, res) => {
+  const { invoiceId, transactionId, paymentDate, paymentAmount } = req.body;
+  if (!invoiceId || !transactionId || !paymentDate || !paymentAmount) {
+    return res.status(400).json({ message: "All fields required" });
+  }
+
+  try {
+    await db.promise().query(
+      `UPDATE invoices SET status = 'completed', transaction_id = ?, payment_date = ?, payment_amount = ? WHERE id = ?`,
+      [transactionId, paymentDate, paymentAmount, invoiceId]
+    );
+    res.json({ message: "Payment marked as received" });
+  } catch (err) {
+    console.error("POST /mark-payment error:", err);
+    res.status(500).json({ message: "Failed to mark payment" });
   }
 });
 

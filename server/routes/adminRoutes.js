@@ -211,7 +211,15 @@ router.get("/report/pdf", verifyAdmin, (req, res) => {
   });
 });
 
-/* ================= APPROVE IMAGE AND UPLOAD TO VENDOR ================= */
+/* ================= APPROVE IMAGE ================= */
+/**
+ * This route approves an image without uploading to vendor.
+ * Steps:
+ * 1. Updates the image status to 'approved' in the database.
+ * 2. Sets approval timestamp and clears any rejection data.
+ * 3. Updates the associated task status if all images for the task are now approved.
+ * 4. Returns a success message.
+ */
 router.post("/approve-image/:imageId", verifyAdmin, async (req, res) => {
   const imageId = req.params.imageId;
   try {
@@ -219,44 +227,18 @@ router.post("/approve-image/:imageId", verifyAdmin, async (req, res) => {
     if (!rows || rows.length === 0) return res.status(404).json({ message: "Image not found" });
 
     const image = rows[0];
-    const uploadsDir = path.join(__dirname, "..", "uploads");
-    const filePath = path.join(uploadsDir, image.filename);
 
-    if (!fs.existsSync(filePath)) {
-      console.error("Approved image file missing:", filePath);
-      return res.status(500).json({ message: "Image file not found on server" });
-    }
-
-    // Request signed URL and upload the file
-    try {
-      await vendorUploadService.uploadApprovedImageToVendor(filePath, image.renamed_filename || image.filename, image.mime_type || "application/octet-stream");
-    } catch (err) {
-      console.error("Vendor upload failed for imageId", imageId, err);
-      return res.status(502).json({ message: "Failed to upload to vendor", error: err.message || err });
-    }
-
-    // Update image status to approved and mark uploaded_to_vendor = true when possible
+    // Update image status to approved
     try {
       await db.promise().query(
         `UPDATE images
-         SET status = 'approved', approved_at = NOW(), approved_by = ?, uploaded_to_vendor = 1, admin_notes = ?
+         SET status = 'approved', approved_at = NOW(), approved_by = ?, admin_notes = ?
          WHERE id = ?`,
         [req.user.id, req.body.admin_notes || null, imageId]
       );
     } catch (updateErr) {
-      // If DB doesn't have uploaded_to_vendor column, fallback to update without it
-      if (updateErr && updateErr.code === "ER_BAD_FIELD_ERROR") {
-        console.warn("images.uploaded_to_vendor column missing — skipping that field");
-        await db.promise().query(
-          `UPDATE images
-           SET status = 'approved', approved_at = NOW(), approved_by = ?, admin_notes = ?
-           WHERE id = ?`,
-          [req.user.id, req.body.admin_notes || null, imageId]
-        );
-      } else {
-        console.error("Failed to update image status for imageId", imageId, updateErr);
-        return res.status(500).json({ message: "Failed to update image status" });
-      }
+      console.error("Failed to update image status for imageId", imageId, updateErr);
+      return res.status(500).json({ message: "Failed to update image status" });
     }
 
     // Update task status if all images are approved (best-effort)
@@ -275,7 +257,7 @@ router.post("/approve-image/:imageId", verifyAdmin, async (req, res) => {
       console.warn("Failed to update task status for imageId", imageId, taskErr);
     }
 
-    res.json({ message: "Image approved and uploaded to vendor" });
+    res.json({ message: "Image approved" });
   } catch (err) {
     console.error("/approve-image error:", err);
     res.status(500).json({ message: "Internal server error" });
@@ -356,6 +338,15 @@ router.put("/approve/:id", verifyAdmin, (req, res) => {
 });
 
 /* ================= REJECT IMAGE ================= */
+/**
+ * This route rejects an image.
+ * Steps:
+ * 1. Validates that admin_notes (rejection reason) is provided.
+ * 2. Updates the image status to 'rejected' in the database.
+ * 3. Sets rejection timestamp and clears any approval data.
+ * 4. Returns a success message.
+ * Note: Admin notes are required for rejection to ensure transparency.
+ */
 router.put("/reject/:id", verifyAdmin, (req, res) => {
   const { admin_notes } = req.body;
 
@@ -376,6 +367,125 @@ router.put("/reject/:id", verifyAdmin, (req, res) => {
       res.json({ message: "Image rejected" });
     }
   );
+});
+
+/* ================= PUSH IMAGE TO VENDOR ================= */
+/**
+ * This route pushes an approved image to the vendor server.
+ * Steps:
+ * 1. Checks if the image exists and is approved.
+ * 2. Verifies the image file exists on the server.
+ * 3. Uploads the image to the vendor using the vendorUploadService.
+ * 4. Updates the database to mark uploaded_to_vendor = 1.
+ * 5. Returns a success message.
+ */
+router.post("/push/:id", verifyAdmin, async (req, res) => {
+  const imageId = req.params.id;
+  try {
+    const [rows] = await db.promise().query("SELECT * FROM images WHERE id = ? AND status = 'approved'", [imageId]);
+    if (!rows || rows.length === 0) return res.status(404).json({ message: "Approved image not found" });
+
+    const image = rows[0];
+    const uploadsDir = path.join(__dirname, "..", "uploads");
+    const filePath = path.join(uploadsDir, image.filename);
+
+    if (!fs.existsSync(filePath)) {
+      console.error("Approved image file missing:", filePath);
+      return res.status(500).json({ message: "Image file not found on server" });
+    }
+
+    // Upload the file to vendor
+    try {
+      await vendorUploadService.uploadApprovedImageToVendor(filePath, image.renamed_filename || image.filename, image.mime_type || "application/octet-stream");
+    } catch (err) {
+      console.error("Vendor upload failed for imageId", imageId, err);
+      return res.status(502).json({ message: "Failed to upload to vendor", error: err.message || err });
+    }
+
+    // Mark as uploaded to vendor
+    try {
+      await db.promise().query(
+        `UPDATE images SET uploaded_to_vendor = 1 WHERE id = ?`,
+        [imageId]
+      );
+    } catch (updateErr) {
+      if (updateErr.code === "ER_BAD_FIELD_ERROR") {
+        console.warn("images.uploaded_to_vendor column missing — skipping update");
+      } else {
+        console.error("Failed to update uploaded_to_vendor for imageId", imageId, updateErr);
+        return res.status(500).json({ message: "Failed to update upload status" });
+      }
+    }
+
+    res.json({ message: "Image pushed to vendor" });
+  } catch (err) {
+    console.error("/push error:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+/* ================= PUSH ALL APPROVED IMAGES FOR A TASK ================= */
+/**
+ * This route pushes all approved images for a given task to the vendor.
+ * Steps:
+ * 1. Finds all images for the task with status = 'approved'.
+ * 2. Uploads each file to the vendor.
+ * 3. Marks each successfully pushed image as uploaded_to_vendor = 1.
+ * 4. Returns a summary of results.
+ */
+router.post("/push-task/:taskId", verifyAdmin, async (req, res) => {
+  const taskId = req.params.taskId;
+
+  try {
+    const [images] = await db.promise().query(
+      "SELECT * FROM images WHERE task_id = ? AND status = 'approved'",
+      [taskId]
+    );
+
+    if (!images || images.length === 0) {
+      return res.status(404).json({ message: "No approved images found for this task" });
+    }
+
+    const uploadsDir = path.join(__dirname, "..", "uploads");
+
+    const results = {
+      total: images.length,
+      pushed: 0,
+      skipped: 0,
+      errors: []
+    };
+
+    for (const image of images) {
+      const filePath = path.join(uploadsDir, image.filename);
+      if (!fs.existsSync(filePath)) {
+        results.skipped += 1;
+        results.errors.push({ id: image.id, reason: "File missing" });
+        continue;
+      }
+
+      try {
+        await vendorUploadService.uploadApprovedImageToVendor(filePath, image.renamed_filename || image.filename, image.mime_type || "application/octet-stream");
+        results.pushed += 1;
+
+        // Mark as uploaded_to_vendor (best-effort)
+        try {
+          await db.promise().query(`UPDATE images SET uploaded_to_vendor = 1 WHERE id = ?`, [image.id]);
+        } catch (updateErr) {
+          if (updateErr.code !== "ER_BAD_FIELD_ERROR") {
+            console.warn("Failed to update uploaded_to_vendor for imageId", image.id, updateErr);
+          }
+        }
+      } catch (err) {
+        results.skipped += 1;
+        results.errors.push({ id: image.id, reason: err.message || String(err) });
+      }
+    }
+
+    res.json({ message: "Task push completed", results });
+  } catch (err) {
+    console.error("/push-task error:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
 });
 
 /* ================= CATEGORY CRUD ================= */

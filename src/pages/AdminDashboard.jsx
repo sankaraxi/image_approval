@@ -46,6 +46,7 @@ export default function AdminDashboard() {
   const [reviewImage, setReviewImage] = useState(null);
   const [adminNotes, setAdminNotes] = useState("");
   const [approveLoading, setApproveLoading] = useState(false); // Loading state for approval + vendor upload
+  const [taskPushLoading, setTaskPushLoading] = useState(false); // Loading state for pushing all approved images for a task
 
   // preview
   const [previewImage, setPreviewImage] = useState(null);
@@ -357,11 +358,9 @@ export default function AdminDashboard() {
 
   // ───── review actions ─────
   const approve = async (id) => {
-    setApproveLoading(true);
     try {
-      // Call new POST endpoint that approves AND uploads to vendor
-      const response = await api.post(`/admin/approve-image/${id}`, { admin_notes: adminNotes });
-      alert("✅ " + (response.data?.message || "Image approved and uploaded to vendor"));
+      const response = await api.put(`/admin/approve/${id}`, { admin_notes: "" });
+      alert("✅ " + (response.data?.message || "Image approved"));
       setReviewImage(null);
       setAdminNotes("");
       if (selectedTask) loadTaskImages(selectedTask.id);
@@ -371,21 +370,55 @@ export default function AdminDashboard() {
       const errorMsg = err.response?.data?.message || err.response?.data?.error || err.message || "Failed to approve image";
       console.error("Approval error:", err);
       alert("❌ " + errorMsg);
-    } finally {
-      setApproveLoading(false);
     }
   };
   
-  const reject = async (id) => {
-    if (!adminNotes.trim()) {
-      alert("Description is required for rejection");
-      return;
+  const reject = async (id, notes) => {
+    try {
+      await api.put(`/admin/reject/${id}`, { admin_notes: notes });
+      alert("✅ Image rejected");
+      if (selectedTask) loadTaskImages(selectedTask.id);
+      loadStats();
+    } catch (err) {
+      alert("❌ Failed to reject image");
     }
-    await api.put(`/admin/reject/${id}`, { admin_notes: adminNotes });
-    setReviewImage(null);
-    setAdminNotes("");
-    if (selectedTask) loadTaskImages(selectedTask.id);
-    loadStats();
+  };
+
+  const push = async (id) => {
+    try {
+      const response = await api.post(`/admin/push/${id}`);
+      alert("✅ " + (response.data?.message || "Image pushed to vendor"));
+      if (selectedTask) loadTaskImages(selectedTask.id);
+      else loadAllImages();
+      loadStats();
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || err.message || "Failed to push image";
+      console.error("Push error:", err);
+      alert("❌ " + errorMsg);
+    }
+  };
+
+  const pushTask = async (taskId) => {
+    setTaskPushLoading(true);
+    try {
+      const response = await api.post(`/admin/push-task/${taskId}`);
+      const message = response.data?.message || "Task push completed";
+      const results = response.data?.results;
+      if (results) {
+        alert(`✅ ${message} (pushed ${results.pushed}/${results.total}, skipped ${results.skipped})`);
+      } else {
+        alert(`✅ ${message}`);
+      }
+
+      loadTaskImages(taskId);
+      loadStats();
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || err.message || "Failed to push task images";
+      console.error("Push task error:", err);
+      alert("❌ " + errorMsg);
+    } finally {
+      setTaskPushLoading(false);
+    }
   };
 
   // ───── open task detail ─────
@@ -598,30 +631,42 @@ export default function AdminDashboard() {
         {selectedTask && activeTab === "tasks" && (
           <div>
             <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">{selectedTask.title}</h2>
-                  {selectedTask.description && <p className="text-gray-600 mt-1">{selectedTask.description}</p>}
-                  <p className="text-sm text-gray-500 mt-2">
-                    Category: <span className="font-medium">{selectedTask.category_name}</span> &nbsp;|&nbsp;
-                    Uploaded: <span className="font-medium">{selectedTask.uploaded_count || 0}</span> &nbsp;|&nbsp;
-                    Approved: <span className="font-medium text-green-600">{selectedTask.approved_count || 0}</span> / {selectedTask.total_images} images
-                  </p>
-                  {(selectedTask.start_date || selectedTask.end_date || selectedTask.final_review_date) && (
-                    <div className="flex gap-4 mt-2 text-xs text-gray-400">
-                      {selectedTask.start_date && <span>Start: {new Date(selectedTask.start_date).toLocaleDateString()}</span>}
-                      {selectedTask.end_date && <span>End: {new Date(selectedTask.end_date).toLocaleDateString()}</span>}
-                      {selectedTask.final_review_date && <span>Review by: {new Date(selectedTask.final_review_date).toLocaleDateString()}</span>}
-                    </div>
-                  )}
-                </div>
+              <div className="flex justify-between items-start gap-4">
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-gray-900">{selectedTask.title}</h2>
+                {selectedTask.description && <p className="text-gray-600 mt-1">{selectedTask.description}</p>}
+                <p className="text-sm text-gray-500 mt-2">
+                  Category: <span className="font-medium">{selectedTask.category_name}</span> &nbsp;|&nbsp;
+                  Uploaded: <span className="font-medium">{selectedTask.uploaded_count || 0}</span> &nbsp;|&nbsp;
+                  Approved: <span className="font-medium text-green-600">{selectedTask.approved_count || 0}</span> / {selectedTask.total_images} images
+                </p>
+                {(selectedTask.start_date || selectedTask.end_date || selectedTask.final_review_date) && (
+                  <div className="flex gap-4 mt-2 text-xs text-gray-400">
+                    {selectedTask.start_date && <span>Start: {new Date(selectedTask.start_date).toLocaleDateString()}</span>}
+                    {selectedTask.end_date && <span>End: {new Date(selectedTask.end_date).toLocaleDateString()}</span>}
+                    {selectedTask.final_review_date && <span>Review by: {new Date(selectedTask.final_review_date).toLocaleDateString()}</span>}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col items-end gap-2">
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                   selectedTask.status === "open" ? "bg-blue-100 text-blue-800" :
                   selectedTask.status === "in_progress" ? "bg-yellow-100 text-yellow-800" :
                   selectedTask.status === "completed" ? "bg-green-100 text-green-800" :
                   "bg-gray-100 text-gray-800"
                 }`}>{selectedTask.status.replace("_", " ")}</span>
+
+                {selectedTask.approved_count > 0 && (
+                  <button
+                    onClick={() => pushTask(selectedTask.id)}
+                    disabled={taskPushLoading}
+                    className={`px-3 py-1 text-xs font-medium rounded ${taskPushLoading ? "bg-gray-300 text-gray-600 cursor-not-allowed" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}
+                  >
+                    {taskPushLoading ? "Pushing…" : "Push All Approved"}
+                  </button>
+                )}
               </div>
+            </div>
             </div>
 
             {/* filter bar */}
@@ -671,6 +716,12 @@ export default function AdminDashboard() {
                           onClick={() => setReviewImage(img)}
                           className="mt-2 w-full btn-primary text-sm py-1.5"
                         >Review</button>
+                      )}
+                      {img.status === "approved" && (
+                        <button
+                          onClick={() => push(img.id)}
+                          className="mt-2 w-full btn-success text-sm py-1.5"
+                        >Push</button>
                       )}
                     </div>
                   </div>
@@ -1245,8 +1296,9 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
-              <button onClick={() => reject(reviewImage.id)} className="btn-danger" disabled={approveLoading}>Reject</button>
-              <button onClick={() => approve(reviewImage.id)} className="btn-success" disabled={approveLoading}>{approveLoading ? "⏳ Uploading..." : "Approve"}</button>
+              <button onClick={() => reject(reviewImage.id)} className="btn-danger">Reject</button>
+              <button onClick={() => approve(reviewImage.id)} className="btn-success">Approve</button>
+              <button onClick={() => push(reviewImage.id)} className="btn-primary">Push</button>
             </div>
           </div>
         </div>
