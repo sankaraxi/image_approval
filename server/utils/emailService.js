@@ -153,9 +153,9 @@ const sendBillingEmail = async (billingData) => {
     
     const mailOptions = {
       from: 'info@kggeniuslabs.com',
-      to:'sankar.k@kggeniuslabs.com',
-      // to: 'krishnapriya.p@kggeniuslabs.com',
-      // cc: 'chitradevi.m@kggeniuslabs.com',
+      // to:'sankar.k@kggeniuslabs.com',
+      to: 'krishnapriya.p@kggeniuslabs.com',
+      cc: 'chitradevi.m@kggeniuslabs.com',
       subject: `Billing Report - Genius Labs Image Accumulator (${new Date().toLocaleDateString()})`,
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px;">
