@@ -374,9 +374,15 @@ export default function AdminDashboard() {
   };
   
   const reject = async (id, notes) => {
+    if (!notes || !notes.trim()) {
+      alert("❌ Please provide a reason for rejection");
+      return;
+    }
     try {
       await api.put(`/admin/reject/${id}`, { admin_notes: notes });
       alert("✅ Image rejected");
+      setReviewImage(null);
+      setAdminNotes("");
       if (selectedTask) loadTaskImages(selectedTask.id);
       loadStats();
     } catch (err) {
@@ -693,10 +699,10 @@ export default function AdminDashboard() {
                   <div key={img.id} className="card-premium group">
                     <div className="relative aspect-video bg-gray-200 overflow-hidden">
                       <img
-                        src={`http://localhost:5003/uploads/${img.filename}`}
+                        src={`http://103.118.158.33:5003/uploads/${img.filename}`}
                         alt={img.renamed_filename}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
-                        onClick={() => setPreviewImage(`http://localhost:5003/uploads/${img.filename}`)}
+                        onClick={() => setPreviewImage(`http://103.118.158.33:5003/uploads/${img.filename}`)}
                       />
                       <div className="absolute top-2 right-2">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -1282,7 +1288,7 @@ export default function AdminDashboard() {
             </div>
             <div className="p-6 space-y-4">
               <div className="aspect-video bg-gray-200 rounded-lg overflow-hidden">
-                <img src={`http://localhost:5003/uploads/${reviewImage.filename}`} alt="" className="w-full h-full object-contain" />
+                <img src={`http://103.118.158.33:5003/uploads/${reviewImage.filename}`} alt="" className="w-full h-full object-contain" />
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><p className="text-gray-500">System Name</p><p className="font-medium">{reviewImage.renamed_filename}</p></div>
@@ -1296,7 +1302,7 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
-              <button onClick={() => reject(reviewImage.id)} className="btn-danger">Reject</button>
+              <button onClick={() => reject(reviewImage.id, adminNotes)} className="btn-danger">Reject</button>
               <button onClick={() => approve(reviewImage.id)} className="btn-success">Approve</button>
               <button onClick={() => push(reviewImage.id)} className="btn-primary">Push</button>
             </div>

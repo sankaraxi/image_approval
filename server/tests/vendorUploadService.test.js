@@ -160,7 +160,7 @@ async function runAllTests() {
     console.log('\n📝 NEXT STEPS - Test with real API:');
     console.log('  1. Ensure VENDOR_API_KEY is set in your .env file');
     console.log('  2. Use Postman or curl to test the full /approve-image endpoint:');
-    console.log('     POST http://localhost:5003/api/admin/approve-image/1');
+    console.log('     POST http://103.118.158.33:5003/api/admin/approve-image/1');
     console.log('  3. Check console logs for vendor API responses');
     console.log('  4. Verify database: SELECT * FROM images WHERE id = 1;');
   } else {
