@@ -46,19 +46,46 @@ function buildRetailName(meta, index) {
   return `${client}_${storeId}_${category}_${product}_${shelf}_${angle}_${date}_${seq}.${ext}`;
 }
 
+function normalizeAgriCamera(value) {
+  if (!value || typeof value !== "string") return "DR";
+  const mapping = {
+    DRONE: "DR", DR: "DR",
+    FRONT: "FC", "FRONT CAMERA": "FC", FC: "FC",
+    REAR: "RC", "REAR CAMERA": "RC", RC: "RC",
+    LEFT: "LC", "LEFT CAMERA": "LC", LC: "LC",
+    RIGHT: "RIC", "RIGHT INSIDE": "RIC", "RIGHT INSIDE CAMERA": "RIC", RIC: "RIC"
+  };
+
+  const key = value.trim().toUpperCase();
+  if (mapping[key]) return mapping[key];
+
+  const words = key.split(/\s+/).filter(Boolean);
+  if (words.length === 1) {
+    return words[0].slice(0, 2).toUpperCase();
+  }
+  return (words[0][0] + (words[1][0] || "")).toUpperCase();
+}
+
+function normalizeAgriCrop(value) {
+  if (!value || typeof value !== "string") return "";
+  const x = value.trim().toUpperCase();
+  const words = x.split(/\s+/).filter(Boolean);
+  if (words.length === 1) return words[0].slice(0, 3);
+  if (words.length >= 2) return (words[0][0] + words[1][0]).slice(0, 3);
+  return x.slice(0, 3);
+}
+
 function buildAgriName(meta, index) {
-  const cropName          = (meta.cropName || "Crop").replace(/\s+/g, "");
-  const state             = (meta.state || "State").replace(/\s+/g, "");
-  const district          = (meta.district || "District").replace(/\s+/g, "");
-  const date              = meta.date || (() => {
-    const d = new Date();
-    return String(d.getDate()).padStart(2, "0") +
-           String(d.getMonth() + 1).padStart(2, "0") +
-           d.getFullYear();
-  })();
-  const observedCondition = (meta.observedCondition || "normalGrowth").replace(/\s+/g, "");
-  const ext               = meta.ext || "jpg";
-  return `${cropName}_${state}_${district}_${date}_${observedCondition}.${ext}`;
+  const prefix    = "AGR";
+  const field     = (meta.field || "F01").toUpperCase().replace(/\s+/g, "");
+  const crop      = normalizeAgriCrop(meta.crop || "RIC");
+  const condition = (meta.condition || "HL").toUpperCase().replace(/\s+/g, "");
+  const camera    = normalizeAgriCamera(meta.camera || "DR");
+  const date      = meta.date || new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const frame     = `F${String(index).padStart(3, "0")}`;
+  const ext       = meta.ext || "jpg";
+
+  return `${prefix}_${field}_${crop}_${condition}_${camera}_${date}_${frame}.${ext}`;
 }
 
 /**

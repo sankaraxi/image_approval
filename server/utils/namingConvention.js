@@ -9,14 +9,14 @@
 const MOBILITY_PATTERN = /^MOB_[A-Z]{3}_[A-Z]{2,3}_\d{8}_F\d{3,4}\.(jpg|jpeg|png)$/i;
 
 // Retail Sector Naming Convention
-// Format: Client_StoreID_Category_Product_Shelf_Angle_Date_Sequence.jpg
-// Example: Reliance_STR1023_Beverages_CocaCola_330ml_Shelf2_Front_20260205_01.jpg
-const RETAIL_PATTERN = /^[A-Za-z0-9-]+_[A-Z]{3}\d+_[A-Za-z]+_[A-Za-z0-9-]+_Shelf\d+_[A-Za-z]+_\d{8}_\d{2,3}\.(jpg|jpeg|png)$/i;
+// Format: RET_Client_StoreID_Category_Product_Shelf_Angle_Date_Sequence.jpg
+// Example: RET_Reliance_STR1023_Beverages_CocaCola_330ml_Shelf2_Front_20260205_01.jpg
+const RETAIL_PATTERN = /^RET_[A-Za-z0-9-]+_[A-Z]{3}\d+_[A-Za-z]+_[A-Za-z0-9-]+_Shelf\d+_[A-Za-z]+_\d{8}_\d{2,3}\.(jpg|jpeg|png)$/i;
 
 // Agri Sector Naming Convention
-// Format: CropName_State_District_Date_ObservedCondition.jpg
-// Example: Chilli_Kerala_Palakkad_24022026_healthyPlant.jpg
-const AGRI_PATTERN = /^[A-Za-z]+_[A-Za-z]+_[A-Za-z]+_\d{8}_[A-Za-z]+\.(jpg|jpeg|png)$/i;
+// Format: AGR_Field_Crop_Condition_Camera_Date_FrameID.jpg
+// Example: AGR_F01_RIC_HL_DR_20260201_F001.jpg
+const AGRI_PATTERN = /^AGR_[A-Z0-9]+_[A-Z]{3}_(HL|DS|DRY)_(DR|FC|RC|LC|RIC)_\d{8}_F\d{3}\.(jpg|jpeg|png)$/i;
 
 const CAMERA_POSITIONS = ['FC', 'RC', 'LC', 'RIC'];
 const CAPTURE_ANGLES = ['Front', 'Left', 'Right', 'Top'];
@@ -24,6 +24,36 @@ const OBSERVED_CONDITIONS = [
   'healthyPlant', 'diseasedPlant', 'pestAffected', 'leafDamage',
   'fruitRot', 'wiltSymptom', 'nutrientDeficiency', 'normalGrowth'
 ];
+const AGRI_CAMERAS = ['DR', 'FC', 'RC', 'LC', 'RIC'];
+const AGRI_CAMERA_MAP = {
+  'DRONE': 'DR',
+  'DR': 'DR',
+  'FRONT': 'FC',
+  'FRONT CAMERA': 'FC',
+  'FC': 'FC',
+  'REAR': 'RC',
+  'REAR CAMERA': 'RC',
+  'RC': 'RC',
+  'LEFT': 'LC',
+  'LEFT CAMERA': 'LC',
+  'LC': 'LC',
+  'RIGHT': 'RIC',
+  'RIGHT INSIDE': 'RIC',
+  'RIGHT INSIDE CAMERA': 'RIC',
+  'RIC': 'RIC'
+};
+
+function normalizeAgriCamera(value) {
+  if (!value || typeof value !== 'string') return null;
+  const normalized = value.trim().toUpperCase();
+  if (AGRI_CAMERA_MAP[normalized]) return AGRI_CAMERA_MAP[normalized];
+
+  const words = normalized.split(/\s+/).filter(Boolean);
+  if (words.length === 1) {
+    return words[0].slice(0, 2).toUpperCase();
+  }
+  return (words[0][0] + (words[1][0] || '')).toUpperCase();
+}
 
 /**
  * Validate Mobility sector image filename
@@ -106,7 +136,7 @@ function validateRetailNaming(filename) {
     const parts = filename.split('_');
     
     if (parts.length < 8) {
-      errors.push('Invalid format. Expected: CLIENT_STOREID_CATEGORY_PRODUCT_SHELF_ANGLE_DATE_SEQ.jpg');
+      errors.push('Invalid format. Expected: RET_CLIENT_STOREID_CATEGORY_PRODUCT_SHELF_ANGLE_DATE_SEQ.jpg');
       return { isValid: false, errors, metadata };
     }
 
@@ -224,56 +254,58 @@ function validateAgriNaming(filename) {
   const errors = [];
   const metadata = {};
 
-  if (!AGRI_PATTERN.test(filename)) {
-    const parts = filename.replace(/\.(jpg|jpeg|png)$/i, '').split('_');
-
-    if (parts.length < 5) {
-      errors.push('Invalid format. Expected: CropName_State_District_Date_ObservedCondition.jpg');
-      return { isValid: false, errors, metadata };
-    }
-
-    if (!parts[0] || parts[0].length < 2) {
-      errors.push('Crop name is required (min 2 chars)');
-    } else {
-      metadata.cropName = parts[0];
-    }
-
-    if (!parts[1] || parts[1].length < 2) {
-      errors.push('State is required');
-    } else {
-      metadata.state = parts[1];
-    }
-
-    if (!parts[2] || parts[2].length < 2) {
-      errors.push('District is required');
-    } else {
-      metadata.district = parts[2];
-    }
-
-    if (parts[3] && !/^\d{8}$/.test(parts[3])) {
-      errors.push(`Date must be DDMMYYYY format, found '${parts[3]}'`);
-    } else {
-      metadata.date = parts[3];
-    }
-
-    if (!parts[4]) {
-      errors.push('Observed condition is required');
-    } else {
-      metadata.observedCondition = parts[4].split('.')[0];
-    }
-
-    return { isValid: errors.length === 0, errors, metadata };
-  }
-
   const namePart = filename.replace(/\.(jpg|jpeg|png)$/i, '');
   const parts = namePart.split('_');
-  metadata.cropName = parts[0];
-  metadata.state = parts[1];
-  metadata.district = parts[2];
-  metadata.date = parts[3];
-  metadata.observedCondition = parts[4];
 
-  return { isValid: true, errors: [], metadata };
+  if (parts[0] !== 'AGR') {
+    errors.push("Invalid prefix. Expected 'AGR'");
+    return { isValid: false, errors, metadata };
+  }
+
+  if (parts.length !== 7) {
+    errors.push('Invalid format. Expected: AGR_Field_Crop_Condition_Camera_Date_FrameID');
+    return { isValid: false, errors, metadata };
+  }
+
+  metadata.field = parts[1];
+  if (!/^[A-Z0-9]+$/i.test(metadata.field)) {
+    errors.push('Field/Location code is required (e.g. F01, F02)');
+  }
+
+  metadata.crop = parts[2];
+  if (!/^[A-Z]{3}$/i.test(metadata.crop)) {
+    errors.push('Crop code should be 3 letters (normalized from crop name)');
+  }
+
+  metadata.condition = parts[3];
+  if (!/^(HL|DS|DRY)$/i.test(metadata.condition)) {
+    errors.push('Condition must be one of HL, DS, DRY');
+  }
+
+  metadata.camera = parts[4];
+  const cameraCode = normalizeAgriCamera(metadata.camera);
+  if (!cameraCode || !AGRI_CAMERAS.includes(cameraCode)) {
+    errors.push(`Camera must be DR, FC, RC, LC, RIC (or Drone/Front Camera/Rear Camera/Left/Right Inside), found '${metadata.camera}'`);
+  } else {
+    metadata.camera = cameraCode;
+  }
+
+  metadata.date = parts[5];
+  if (!/^\d{8}$/.test(metadata.date)) {
+    errors.push('Date must be YYYYMMDD');
+  }
+
+  metadata.frameId = parts[6];
+  if (!/^F\d{3}$/.test(metadata.frameId)) {
+    errors.push('Frame ID must be F001-F999');
+  }
+
+  if (!AGRI_PATTERN.test(filename)) {
+    // continue errors (if any) from field checks
+    return { isValid: false, errors, metadata };
+  }
+
+  return { isValid: errors.length === 0, errors, metadata };
 }
 
 /**
@@ -296,10 +328,11 @@ function getNamingConventionHelp(mainCategory) {
       ]
     },
     'Retail': {
-      format: 'Client_StoreID_Category_Product_Shelf_Angle_Date_Sequence.jpg',
-      example: 'Reliance_STR1023_Beverages_CocaCola_330ml_Shelf2_Front_20260205_01.jpg',
+      format: 'RET_Client_StoreID_Category_Product_Shelf_Angle_Date_Sequence.jpg',
+      example: 'RET_Reliance_STR1023_Beverages_CocaCola_330ml_Shelf2_Front_20260205_01.jpg',
       description: 'Retail sector images',
       fields: [
+        { name: 'Part', value: 'RET', description: 'Project type - always RET' },
         { name: 'Client', value: 'Reliance', description: 'Retail brand name' },
         { name: 'StoreID', value: 'STR1023', description: 'Unique store identifier' },
         { name: 'Category', value: 'Beverages', description: 'Product category' },
@@ -311,15 +344,17 @@ function getNamingConventionHelp(mainCategory) {
       ]
     },
     'Agri': {
-      format: 'CropName_State_District_Date_ObservedCondition.jpg',
-      example: 'Chilli_Kerala_Palakkad_24022026_healthyPlant.jpg',
-      description: 'Agriculture sector – crop and field monitoring images',
+      format: 'AGR_Field_Crop_Condition_Camera_Date_FrameID.jpg',
+      example: 'AGR_F01_RIC_HL_DR_20260201_F001.jpg',
+      description: 'Agriculture sector – field monitoring images',
       fields: [
-        { name: 'CropName', value: 'Chilli', description: 'Name of the crop (e.g., Chilli, Rice, Cotton)' },
-        { name: 'State', value: 'Kerala', description: 'State name' },
-        { name: 'District', value: 'Palakkad', description: 'District name' },
-        { name: 'Date', value: '24022026', description: 'Date in DDMMYYYY format' },
-        { name: 'ObservedCondition', value: 'healthyPlant', description: `Condition: ${OBSERVED_CONDITIONS.join(', ')}` }
+        { name: 'Part', value: 'AGR', description: 'Project type - always AGR (forced)' },
+        { name: 'Field', value: 'F01', description: 'Field/location code (e.g. F01, F02)' },
+        { name: 'Crop', value: 'RIC', description: 'Crop type: one-word &rarr; first 3 letters, two-word &rarr; first letters each of first two words' },
+        { name: 'Condition', value: 'HL', description: 'Health status (HL, DS, DRY)' },
+        { name: 'Camera', value: 'DR', description: 'Capture type: DR/FC/RC/LC/RIC or one-word/two-word value with auto code mapping' },
+        { name: 'Date', value: '20260201', description: 'Date in YYYYMMDD format' },
+        { name: 'FrameID', value: 'F001', description: 'Running frame number F001-F999' }
       ]
     }
   };
@@ -335,5 +370,6 @@ module.exports = {
   getNamingConventionHelp,
   CAMERA_POSITIONS,
   CAPTURE_ANGLES,
-  OBSERVED_CONDITIONS
+  OBSERVED_CONDITIONS,
+  AGRI_CAMERAS
 };

@@ -295,7 +295,7 @@ const [pestRate, setPestRate] = useState(4);
                             Mark Payment Received
                           </button>
                         )}
-                        <div className="border-t pt-4">
+                        {/* <div className="border-t pt-4">
                           <h4 className="font-semibold mb-2">Tasks:</h4>
                           <div className="space-y-2">
                             {inv.tasks.map((t) => (
@@ -308,7 +308,40 @@ const [pestRate, setPestRate] = useState(4);
                               </div>
                             ))}
                           </div>
-                        </div>
+                        </div> */}
+                        <div className="border-t pt-4">
+                            <h4 className="font-semibold mb-2">Tasks:</h4>
+
+                            <div className="overflow-x-auto">
+                              <table className="min-w-full border border-gray-200 rounded">
+                                <thead className="bg-gray-100">
+                                  <tr>
+                                    <th className="text-left px-4 py-2 border text-primary-600 ">Task</th>
+                                    <th className="text-left px-4 py-2 border text-primary-600">Approval Count</th>
+                                    <th className="text-right px-4 py-2 border text-primary-600">Amount</th>
+                                  </tr>
+                                </thead>
+
+                                <tbody>
+                                  {inv.tasks.map((t) => (
+                                    <tr key={t.id} className="hover:bg-gray-50">
+                                      <td className="px-4 py-2 border font-medium">
+                                        {t.task_title}
+                                      </td>
+
+                                      <td className="px-4 py-2 border text-sm text-gray-600">
+                                        {t.approved_images}
+                                      </td>
+
+                                      <td className="px-4 py-2 border text-right font-semibold text-green-600">
+                                        Rs.{Number(t.total_amount).toLocaleString("en-IN")}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
                       </div>
                     )}
                   </div>

@@ -101,7 +101,11 @@ export default function StudentDashboard() {
       // Load dynamic naming convention fields for this category
       try {
         const fieldsRes = await api.get(`/categories/naming-fields/${task.main_category_id}`);
-        setDynamicNamingFields(fieldsRes.data);
+        if (task.category_name === 'Agri' || task.category_name === 'Mobility') {
+          setDynamicNamingFields([]); // ignore old dynamic fields for these built-in conventions
+        } else {
+          setDynamicNamingFields(fieldsRes.data);
+        }
       } catch { setDynamicNamingFields([]); }
     } catch {
       setTaskDetail(null);
@@ -115,8 +119,10 @@ export default function StudentDashboard() {
     if (!files.length) return alert("Please select images to upload");
     if (!uploadTask) return;
 
-    // Validate naming fields dynamically
-    if (dynamicNamingFields.length > 0) {
+    // Validate naming fields dynamically (only for truly dynamic categories)
+    const isMobility = uploadTask.category_name === "Mobility";
+    const isAgriCat = uploadTask.category_name === "Agri";
+    if (dynamicNamingFields.length > 0 && !isMobility && !isAgriCat) {
       const missingFields = dynamicNamingFields
         .filter(f => f.is_required && f.field_name !== 'frame' && f.field_name !== 'sequence')
         .filter(f => !namingMeta[f.field_name]);
@@ -132,8 +138,8 @@ export default function StudentDashboard() {
           return alert("Please fill in all naming convention fields (City, Camera)");
         }
       } else if (isAgriCat) {
-        if (!namingMeta.cropName || !namingMeta.state || !namingMeta.district || !namingMeta.observedCondition) {
-          return alert("Please fill in all naming convention fields (Crop Name, State, District, Observed Condition)");
+        if (!namingMeta.field || !namingMeta.crop || !namingMeta.condition || !namingMeta.camera || !namingMeta.date) {
+          return alert("Please fill in all Agri naming convention fields (Field, Crop, Condition, Camera, Date)");
         }
       } else {
         if (!namingMeta.client || !namingMeta.storeId || !namingMeta.category || !namingMeta.product || !namingMeta.shelf || !namingMeta.angle) {
@@ -181,6 +187,31 @@ export default function StudentDashboard() {
 
   const isMob = uploadTask?.category_name === "Mobility";
   const isAgri = uploadTask?.category_name === "Agri";
+
+  const normalizeAgriCamera = (value) => {
+    if (!value || typeof value !== 'string') return 'DR';
+    const x = value.trim().toUpperCase();
+    const map = {
+      DRONE: 'DR', DR: 'DR',
+      FRONT: 'FC', 'FRONT CAMERA': 'FC', FC: 'FC',
+      REAR: 'RC', 'REAR CAMERA': 'RC', RC: 'RC',
+      LEFT: 'LC', 'LEFT CAMERA': 'LC', LC: 'LC',
+      RIGHT: 'RIC', 'RIGHT INSIDE': 'RIC', 'RIGHT INSIDE CAMERA': 'RIC', RIC: 'RIC'
+    };
+    if (map[x]) return map[x];
+    const words = x.split(/\s+/).filter(Boolean);
+    if (words.length === 1) return words[0].slice(0, 2);
+    return (words[0][0] + (words[1][0] || '')).slice(0, 2);
+  };
+
+  const normalizeAgriCrop = (value) => {
+    if (!value || typeof value !== 'string') return '';
+    const x = value.trim().toUpperCase();
+    const words = x.split(/\s+/).filter(Boolean);
+    if (words.length === 1) return words[0].slice(0, 3);
+    if (words.length >= 2) return (words[0][0] + words[1][0]).slice(0, 3);
+    return x.slice(0, 3);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -304,9 +335,9 @@ export default function StudentDashboard() {
           ) : (
             filteredImages.map((img) => (
               <div key={img.id} className="card-premium group">
-                <div className="relative aspect-video bg-gray-200 overflow-hidden cursor-pointer" onClick={() => setPreviewImage(`http://103.118.158.33:5003/uploads/${img.filename}`)}>
+                <div className="relative aspect-video bg-gray-200 overflow-hidden cursor-pointer" onClick={() => setPreviewImage(`http://localhost:5003/uploads/${img.filename}`)}>
                   <img
-                    src={`http://103.118.158.33:5003/uploads/${img.filename}`}
+                    src={`http://localhost:5003/uploads/${img.filename}`}
                     alt={img.renamed_filename}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
@@ -441,7 +472,7 @@ export default function StudentDashboard() {
               {/* ── Naming Convention Fields (Dynamic) ── */}
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                 <h3 className="text-sm font-semibold text-gray-800 mb-1">Naming Convention Details *</h3>
-                {dynamicNamingFields.length > 0 ? (
+                {dynamicNamingFields.length > 0 && !isMob && !isAgri ? (
                   <>
                     <p className="text-xs text-gray-500 mb-3">
                       Format: {dynamicNamingFields.filter(f => f.field_name !== 'frame' && f.field_name !== 'sequence').map(f => `{${f.field_label}}`).join("_")}.jpg
@@ -487,6 +518,9 @@ export default function StudentDashboard() {
                     {/* Dynamic Preview */}
                     <div className="mt-3 bg-white border border-gray-200 rounded p-3">
                       <p className="text-xs font-medium text-gray-500 mb-1">Preview (first image):</p>
+                      {isAgri && (
+                        <p className="text-xs text-gray-500 mb-1">Agri recommended pattern: AGR_Field_Crop_Condition_Camera_Date_FrameID.jpg</p>
+                      )}
                       <code className="text-sm text-primary-700">
                         {dynamicNamingFields
                           .filter(f => f.field_name !== 'frame' && f.field_name !== 'sequence')
@@ -501,8 +535,8 @@ export default function StudentDashboard() {
                       {isMob
                         ? "Format: MOB_City_Camera_Date_FrameID.jpg"
                         : isAgri
-                          ? "Format: CropName_State_District_DDMMYYYY_ObservedCondition.jpg"
-                          : "Format: Client_StoreID_Category_Product_Shelf_Angle_Date_Sequence.jpg"}
+                          ? "Format: AGR_Field_Crop_Condition_Camera_Date_FrameID.jpg"
+                          : "Format: RET_Client_StoreID_Category_Product_Shelf_Angle_Date_Sequence.jpg"}
                     </p>
 
                     {isMob ? (
@@ -545,58 +579,68 @@ export default function StudentDashboard() {
                     ) : isAgri ? (
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Crop Name *</label>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Field / Location Code *</label>
                           <input
                             className="input-field text-sm py-2"
-                            placeholder="e.g. Chilli, Rice, Cotton"
-                            value={namingMeta.cropName || ""}
-                            onChange={(e) => setNamingMeta({ ...namingMeta, cropName: e.target.value })}
+                            placeholder="e.g. F01"
+                            value={namingMeta.field || ""}
+                            onChange={(e) => setNamingMeta({ ...namingMeta, field: e.target.value.toUpperCase() })}
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">State *</label>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Camera Type *</label>
                           <input
+                            list="agriCaptureTypes"
                             className="input-field text-sm py-2"
-                            placeholder="e.g. Kerala, TamilNadu"
-                            value={namingMeta.state || ""}
-                            onChange={(e) => setNamingMeta({ ...namingMeta, state: e.target.value })}
+                            placeholder="e.g. Drone, Front Camera, Rear Camera, DR, FC"
+                            value={namingMeta.camera || ""}
+                            onChange={(e) => setNamingMeta({ ...namingMeta, camera: e.target.value })}
                           />
+                          <datalist id="agriCaptureTypes">
+                            <option value="DR">DR (Drone)</option>
+                            <option value="FC">FC (Front Camera)</option>
+                            <option value="RC">RC (Rear Camera)</option>
+                            <option value="LC">LC (Left Camera)</option>
+                            <option value="RIC">RIC (Right Inside Camera)</option>
+                            <option value="Drone">Drone</option>
+                            <option value="Front Camera">Front Camera</option>
+                            <option value="Rear Camera">Rear Camera</option>
+                            <option value="Left Camera">Left Camera</option>
+                            <option value="Right Inside Camera">Right Inside Camera</option>
+                          </datalist>
+                          <p className="text-xs text-gray-400 mt-1">Camera code will normalize to 2 letters: one-word &rarr; first 2 letters, multi-word &rarr; first letters each of first two words.</p>
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">District *</label>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Date (YYYYMMDD) *</label>
                           <input
                             className="input-field text-sm py-2"
-                            placeholder="e.g. Palakkad, Coimbatore"
-                            value={namingMeta.district || ""}
-                            onChange={(e) => setNamingMeta({ ...namingMeta, district: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Date (DDMMYYYY)</label>
-                          <input
-                            className="input-field text-sm py-2"
-                            placeholder="e.g. 24022026"
+                            placeholder="e.g. 20260201"
                             maxLength={8}
                             value={namingMeta.date || ""}
                             onChange={(e) => setNamingMeta({ ...namingMeta, date: e.target.value })}
                           />
                         </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Crop Type *</label>
+                          <input
+                            className="input-field text-sm py-2"
+                            placeholder="e.g. Rice, Wheat, Corn, Chilli"
+                            value={namingMeta.crop || ""}
+                            onChange={(e) => setNamingMeta({ ...namingMeta, crop: e.target.value })}
+                          />
+                          <p className="text-xs text-gray-400 mt-1">Crop code will normalize to 3 letters: one-word &rarr; first 3 letters, two-word &rarr; first letters each of first two words.</p>
+                        </div>
                         <div className="col-span-2">
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Observed Condition *</label>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Health Status *</label>
                           <select
                             className="select-field text-sm py-2"
-                            value={namingMeta.observedCondition || ""}
-                            onChange={(e) => setNamingMeta({ ...namingMeta, observedCondition: e.target.value })}
+                            value={namingMeta.condition || ""}
+                            onChange={(e) => setNamingMeta({ ...namingMeta, condition: e.target.value })}
                           >
                             <option value="">Select</option>
-                            <option value="healthyPlant">Healthy Plant</option>
-                            <option value="diseasedPlant">Diseased Plant</option>
-                            <option value="pestAffected">Pest Affected</option>
-                            <option value="leafDamage">Leaf Damage</option>
-                            <option value="fruitRot">Fruit Rot</option>
-                            <option value="wiltSymptom">Wilt Symptom</option>
-                            <option value="nutrientDeficiency">Nutrient Deficiency</option>
-                            <option value="normalGrowth">Normal Growth</option>
+                            <option value="HL">HL (Healthy)</option>
+                            <option value="DS">DS (Diseased)</option>
+                            <option value="DRY">DRY (Dry)</option>
                           </select>
                         </div>
                       </div>
@@ -681,8 +725,8 @@ export default function StudentDashboard() {
                         {isMob
                           ? `MOB_${(namingMeta.city || "___").substring(0, 3)}_${namingMeta.camera || "__"}_${namingMeta.date || "YYYYMMDD"}_F001.jpg`
                           : isAgri
-                            ? `${namingMeta.cropName || "CropName"}_${namingMeta.state || "State"}_${namingMeta.district || "District"}_${namingMeta.date || "DDMMYYYY"}_${namingMeta.observedCondition || "Condition"}.jpg`
-                            : `${namingMeta.client || "Client"}_${namingMeta.storeId || "STR0000"}_${namingMeta.category || "Category"}_${namingMeta.product || "Product"}_${namingMeta.shelf || "Shelf1"}_${namingMeta.angle || "Front"}_${namingMeta.date || "YYYYMMDD"}_01.jpg`}
+                            ? `AGR_${namingMeta.field || "F01"}_${normalizeAgriCrop(namingMeta.crop)}_${namingMeta.condition || "HL"}_${normalizeAgriCamera(namingMeta.camera)}_${namingMeta.date || "YYYYMMDD"}_F001.jpg`
+                            : `RET_${namingMeta.client || "Client"}_${namingMeta.storeId || "STR0000"}_${namingMeta.category || "Category"}_${namingMeta.product || "Product"}_${namingMeta.shelf || "Shelf1"}_${namingMeta.angle || "Front"}_${namingMeta.date || "YYYYMMDD"}_01.jpg`}
                       </code>
                     </div>
                   </>

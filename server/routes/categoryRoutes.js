@@ -113,6 +113,35 @@ router.get("/naming-fields/:categoryId", (req, res) => {
     [req.params.categoryId],
     (err, rows) => {
       if (err) return res.status(500).json(err);
+
+      if (!rows || rows.length === 0) {
+        db.query("SELECT name FROM categories WHERE id = ?", [req.params.categoryId], (err2, catRows) => {
+          if (err2) return res.status(500).json(err2);
+          const categoryName = catRows?.[0]?.name;
+          if (categoryName === 'Agri') {
+            const defaultFields = [
+              { id: null, category_id: req.params.categoryId, field_name: 'field', field_label: 'Field / Location Code', field_type: 'text', field_options: null, is_required: 1, display_order: 1, placeholder: 'F01', separator: '_' },
+              { id: null, category_id: req.params.categoryId, field_name: 'crop', field_label: 'Crop Type', field_type: 'select', field_options: JSON.stringify(['RIC', 'WHT', 'CRN']), is_required: 1, display_order: 2, placeholder: 'RIC', separator: '_' },
+              { id: null, category_id: req.params.categoryId, field_name: 'condition', field_label: 'Health Condition', field_type: 'select', field_options: JSON.stringify(['HL', 'DS', 'DRY']), is_required: 1, display_order: 3, placeholder: 'HL', separator: '_' },
+              { id: null, category_id: req.params.categoryId, field_name: 'camera', field_label: 'Capture Type', field_type: 'text', field_options: null, is_required: 1, display_order: 4, placeholder: 'DR/FC', separator: '_' },
+              { id: null, category_id: req.params.categoryId, field_name: 'date', field_label: 'Date', field_type: 'date', field_options: null, is_required: 1, display_order: 5, placeholder: 'YYYYMMDD', separator: '_' },
+              { id: null, category_id: req.params.categoryId, field_name: 'frame', field_label: 'Frame ID', field_type: 'text', field_options: null, is_required: 1, display_order: 6, placeholder: 'F001', separator: '_' }
+            ];
+
+            const parsed = defaultFields.map((r) => ({
+              ...r,
+              field_options: r.field_options ? JSON.parse(r.field_options) : null
+            }));
+            return res.json(parsed);
+          }
+
+          // Default fallback: empty array
+          return res.json([]);
+        });
+
+        return;
+      }
+
       // Parse field_options JSON strings
       const parsed = rows.map(r => ({
         ...r,

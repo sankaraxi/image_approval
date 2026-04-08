@@ -57,6 +57,9 @@ router.post("/generate-bill", verifyBiller, async (req, res) => {
     "healthyPlant": 74,
     "diseasedPlant": 75,
     "pestAffected": 76,
+    "HL": 74,
+    "DS": 75,
+    "DRY": 76,
   };
   const rates = {
     74: 4, // Healthy Plant
@@ -114,10 +117,19 @@ router.post("/generate-bill", verifyBiller, async (req, res) => {
     if (agriTaskIds.length > 0) {
       const subPlaceholders = agriTaskIds.map(() => "?").join(",");
       const [subRows] = await db.promise().query(`
-        SELECT task_id, JSON_UNQUOTE(JSON_EXTRACT(naming_metadata, '$.observedCondition')) as obs_condition, COUNT(*) as count
+        SELECT task_id,
+               COALESCE(
+                 JSON_UNQUOTE(JSON_EXTRACT(naming_metadata, '$.condition')),
+                 JSON_UNQUOTE(JSON_EXTRACT(naming_metadata, '$.observedCondition'))
+               ) as obs_condition,
+               COUNT(*) as count
         FROM images
         WHERE task_id IN (${subPlaceholders}) AND status = 'approved'
-        GROUP BY task_id, JSON_UNQUOTE(JSON_EXTRACT(naming_metadata, '$.observedCondition'))
+        GROUP BY task_id,
+                 COALESCE(
+                   JSON_UNQUOTE(JSON_EXTRACT(naming_metadata, '$.condition')),
+                   JSON_UNQUOTE(JSON_EXTRACT(naming_metadata, '$.observedCondition'))
+                 )
       `, agriTaskIds);
       for (const row of subRows) {
         if (!subCountsByTask[row.task_id]) subCountsByTask[row.task_id] = {};
@@ -201,6 +213,24 @@ router.post("/generate-bill", verifyBiller, async (req, res) => {
   } catch (err) {
     console.error("/generate-bill error:", err);
     res.status(500).json({ message: "Internal server error" });
+  }
+}); 
+/* ================= MARK PAYMENT RECEIVED ================= */
+router.post("/mark-payment", verifyBiller, async (req, res) => {
+  const { invoiceId, transactionId, paymentDate, paymentAmount } = req.body;
+  if (!invoiceId || !transactionId || !paymentDate || !paymentAmount) {
+    return res.status(400).json({ message: "All fields required" });
+  }
+
+  try {
+    await db.promise().query(
+      `UPDATE invoices SET status = 'completed', transaction_id = ?, payment_date = ?, payment_amount = ? WHERE id = ?`,
+      [transactionId, paymentDate, paymentAmount, invoiceId]
+    );
+    res.json({ message: "Payment marked as received" });
+  } catch (err) {
+    console.error("POST /mark-payment error:", err);
+    res.status(500).json({ message: "Failed to mark payment" });
   }
 });
 /* ================= MARK PAYMENT RECEIVED ================= */
