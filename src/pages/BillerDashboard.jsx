@@ -16,7 +16,7 @@ export default function BillerDashboard() {
   const [paymentDate, setPaymentDate] = useState('');
   const [paymentAmount, setPaymentAmount] = useState('');
   const [diseasedRate, setDiseasedRate] = useState(4);
-const [pestRate, setPestRate] = useState(4);
+  const [pestRate, setPestRate] = useState(4);
 
   const { logout } = useContext(AuthContext);
   const navigate = useNavigate();
