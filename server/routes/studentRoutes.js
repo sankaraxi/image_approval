@@ -43,7 +43,7 @@ function buildRetailName(meta, index) {
   const date     = meta.date || new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const seq      = String(index).padStart(2, "0");
   const ext      = meta.ext || "jpg";
-  return `${client}_${storeId}_${category}_${product}_${shelf}_${angle}_${date}_${seq}.${ext}`;
+  return `RET-${client}_${storeId}_${category}_${product}_${shelf}_${angle}_${date}_${seq}.${ext}`;
 }
 
 function normalizeAgriCamera(value) {
